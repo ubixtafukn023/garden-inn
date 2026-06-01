@@ -1887,6 +1887,7 @@ function saveRoomTypeBooking(){
   }
   save(); closeModal();
   ['rooms','cot','fh'].forEach(s=>renderSection(s));
+  renderList();
 }
 
 /* ===== FULL VENUE BOOKING ===== */
@@ -2030,6 +2031,7 @@ function saveFullVenueBooking(){
   });
   save(); closeModal();
   ['rooms','cot','fh'].forEach(s=>renderSection(s));
+  renderList();
   alert(`✅ Full Venue booked for ${name}!\n${ROOMS.length} rooms × ${nights} night${nights>1?'s':''} = ${peso(total)}`);
 }
 
@@ -2233,6 +2235,19 @@ function saveBooking(section){
   renderSection('rooms');
   renderSection('cot');
   renderSection('fh');
+  renderList();
+}
+
+function showToast(msg,color){
+  let t=document.getElementById('del-toast');
+  if(!t){t=document.createElement('div');t.id='del-toast';document.body.appendChild(t);
+    t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;padding:12px 22px;border-radius:12px;font-size:14px;font-weight:600;color:#fff;box-shadow:0 6px 24px rgba(0,0,0,.18);transition:opacity .3s;pointer-events:none;white-space:nowrap';
+  }
+  t.textContent=msg;
+  t.style.background=color||'#dc2626';
+  t.style.opacity='1';
+  clearTimeout(t._to);
+  t._to=setTimeout(()=>{t.style.opacity='0';},2500);
 }
 
 function deleteBooking(){
@@ -2241,6 +2256,7 @@ function deleteBooking(){
   if(!bk)return;
   const v=ALL_VENUES.find(x=>x.id===bk.venueId);
   openPinModal((user)=>{
+    const deletedName=bk.name;
     // log deletion
     deleteLog.unshift({
       ts: new Date().toISOString(),
@@ -2254,8 +2270,14 @@ function deleteBooking(){
     saveDelLog();
     // remove booking + any linked cottage
     bookings=bookings.filter(b=>b.id!==editingId&&b.linkedRoom!==editingId);
-    save(); closeModal();
+    editingId=null;
+    save();
+    closeModal();
+    // refresh every view so deletion is visible everywhere
     ['rooms','cot','fh'].forEach(s=>renderSection(s));
+    renderList();
+    renderOverview();
+    showToast('🗑️ Deleted: '+deletedName,'#dc2626');
   });
 }
 
