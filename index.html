@@ -37,50 +37,71 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .legend{display:flex;gap:12px;margin-bottom:.875rem;flex-wrap:wrap}
 .li{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);font-weight:500}
 .ld{width:10px;height:10px;border-radius:3px;flex-shrink:0}
-.cal-nav{display:flex;align-items:center;gap:8px;margin-bottom:1rem;flex-wrap:wrap}
-.cnbtn{border:1px solid var(--border2);background:var(--surface);padding:6px 14px;border-radius:var(--r);cursor:pointer;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;font-weight:500;transition:all .15s}
-.cnbtn:hover{background:var(--surface2)}
-.nav-title{font-size:15px;font-weight:600;color:var(--text);letter-spacing:-.02em}
+.nav-title{font-size:14px;font-weight:600;color:var(--text);letter-spacing:-.02em}
 .view-toggle{display:flex;gap:2px;background:var(--surface2);padding:3px;border-radius:var(--r);border:1px solid var(--border);margin-left:auto}
 .vtbtn{padding:5px 12px;font-size:12px;border:none;background:none;color:var(--text2);border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;transition:all .15s}
 .vtbtn.active{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.1)}
-.cal-wrap{overflow-x:auto}
-.cal-grid{display:grid;border:1px solid var(--border);border-radius:var(--rlg);overflow:hidden;min-width:700px}
-.week-grid{grid-template-columns:112px repeat(7,1fr)}
-.cal-head{background:var(--surface2);padding:8px 5px;text-align:center;font-size:11px;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);border-right:1px solid var(--border);letter-spacing:.03em;text-transform:uppercase}
+.cal-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--border2) var(--surface2);border-radius:var(--rlg)}
+.cal-wrap::-webkit-scrollbar{height:6px}
+.cal-wrap::-webkit-scrollbar-track{background:var(--surface2);border-radius:4px}
+.cal-wrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+.cal-wrap::-webkit-scrollbar-thumb:hover{background:var(--text3)}
+.cal-grid{display:grid;border:1px solid var(--border);border-radius:var(--rlg);overflow:hidden}
+.week-grid{grid-template-columns:90px repeat(7,110px);width:max-content;min-width:100%}
+.cal-head{background:var(--surface2);padding:6px 3px;text-align:center;font-size:10px;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);border-right:1px solid var(--border);letter-spacing:.02em;text-transform:uppercase;line-height:1.3}
 .cal-head:last-child{border-right:none}
 .cal-head.th{color:var(--today-c);background:var(--today-bg)}
-.cal-cell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:5px;min-height:82px;background:var(--surface);position:relative;cursor:pointer;transition:background .1s;vertical-align:top}
+.cal-head .hday{display:block;font-size:9px;opacity:.75;font-weight:500}
+.cal-head .hdate{display:block;font-size:13px;font-weight:700;line-height:1}
+.cal-cell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:4px 3px;min-height:72px;background:var(--surface);position:relative;cursor:pointer;transition:background .1s;vertical-align:top}
 .cal-cell:hover{background:#faf8f3}
 .cal-cell.tc{background:var(--today-bg)}
 .cal-cell.tc:hover{background:#e4dcfe}
-.cal-cell.rl{background:var(--surface2);cursor:default;padding:8px 10px;border-right:1px solid var(--border2)}
+.cal-cell.rl{background:var(--surface2);cursor:default;padding:6px 8px;border-right:1px solid var(--border2);width:90px}
 .cal-cell.rl:hover{background:var(--surface2)}
-.rn{font-size:12px;font-weight:600;color:var(--text);line-height:1.3}
-.rt{font-size:10px;color:var(--text3);margin-top:2px}
-.rc{font-size:10px;color:var(--text3)}
-.bpill{font-size:10px;border-radius:5px;padding:2px 5px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;font-weight:600;line-height:1.4;display:flex;align-items:center;gap:3px;border:1px solid transparent}
-.pdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.rn{font-size:11px;font-weight:600;color:var(--text);line-height:1.3}
+.rt{font-size:9px;color:var(--text3);margin-top:1px}
+.rc{font-size:9px;color:var(--text3)}
+.bpill{font-size:9px;border-radius:4px;padding:2px 4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;font-weight:600;line-height:1.4;display:flex;align-items:center;gap:2px;border:1px solid transparent;max-width:100%}
+.pdot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
 .p-paid{background:var(--paid-bg);color:var(--paid);border-color:var(--paid-bd)}
 .p-adv{background:var(--adv-bg);color:var(--adv);border-color:var(--adv-bd)}
 .p-wlk{background:var(--wlk-bg);color:var(--wlk);border-color:var(--wlk-bd)}
 .p-gcash{background:var(--gcash-bg);color:var(--gcash);border-color:var(--gcash-bd)}
 .p-cot{background:var(--cot-bg);color:var(--cot);border-color:var(--cot-bd)}
 .p-fh{background:var(--fh-bg);color:var(--fh);border-color:var(--fh-bd)}
-.add-btn{position:absolute;bottom:4px;right:4px;width:20px;height:20px;border-radius:50%;background:var(--surface2);border:1px solid var(--border2);color:var(--text2);font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity .15s;font-weight:600}
+.add-btn{position:absolute;bottom:3px;right:3px;width:18px;height:18px;border-radius:50%;background:var(--surface2);border:1px solid var(--border2);color:var(--text2);font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity .15s;font-weight:600}
 .cal-cell:hover .add-btn{opacity:1}
+/* month grid */
 .month-grid{grid-template-columns:repeat(7,1fr)}
-.mc{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px;min-height:96px;background:var(--surface);cursor:pointer;transition:background .1s}
+.mc{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:4px 3px;min-height:72px;background:var(--surface);cursor:pointer;transition:background .1s;overflow:hidden}
 .mc:hover{background:#faf8f3}
 .mc.om{background:var(--surface2)}
 .mc.om .mdn{color:var(--text3)}
 .mc.tm{background:var(--today-bg)}
 .mc:nth-child(7n){border-right:none}
-.mdn{font-size:12px;font-weight:600;color:var(--text2);width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;display:inline-block;margin-bottom:3px}
+.mdn{font-size:11px;font-weight:700;color:var(--text2);width:20px;height:20px;line-height:20px;text-align:center;border-radius:50%;display:inline-block;margin-bottom:2px}
 .mc.tm .mdn{background:var(--today-c);color:#fff}
-.mpill{font-size:10px;border-radius:4px;padding:2px 5px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;font-weight:600;line-height:1.4}
-.more-lnk{font-size:10px;color:var(--text3);cursor:pointer;margin-top:2px}
+.mpill{font-size:9px;border-radius:3px;padding:1px 4px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;font-weight:600;line-height:1.5;display:block;max-width:100%}
+.more-lnk{font-size:9px;color:var(--text3);cursor:pointer;margin-top:1px;font-weight:600}
 .more-lnk:hover{color:var(--text)}
+/* mobile calendar tweaks */
+@media(max-width:600px){
+  .week-grid{grid-template-columns:70px repeat(7,90px)}
+  .cal-cell.rl{padding:4px 5px;min-width:70px}
+  .rn{font-size:10px}
+  .rt,.rc{display:none}
+  .cal-cell{padding:3px 2px;min-height:60px}
+  .bpill{font-size:8px;padding:1px 3px;gap:2px}
+  .pdot{width:4px;height:4px}
+  .mc{min-height:58px;padding:3px 2px}
+  .mdn{width:18px;height:18px;line-height:18px;font-size:10px}
+  .mpill{font-size:8px;padding:1px 3px}
+  .more-lnk{font-size:8px}
+  .cal-head{font-size:9px;padding:5px 2px}
+  .cal-head .hdate{font-size:11px}
+  .cal-head .hday{font-size:8px}
+}
 /* RATE CARDS */
 .rate-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:1.5rem}
 .rcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.875rem;text-align:center}
@@ -238,9 +259,40 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .today-chip{display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:600;color:var(--text);white-space:nowrap}
 .today-chip.booked{background:var(--paid-bg);border-color:var(--paid-bd);color:var(--paid)}
 .today-chip.soon{background:var(--adv-bg);border-color:var(--adv-bd);color:var(--adv)}
-@media(max-width:600px){.tab-count{display:none}}
+@media(max-width:600px){
+  .tab-count{display:none}
+  .app{padding:.75rem .5rem}
+  .main-tabs{gap:1px;padding:3px}
+  .mtab{padding:6px 9px;font-size:12px}
+  .nav-title{font-size:13px}
+  .view-toggle{margin-left:auto}
+  .vtbtn{padding:4px 9px;font-size:11px}
+  .snav-day{padding:3px 5px;min-width:28px}
+  .snav-day-num{font-size:12px}
+  .snav-month-chip{padding:5px 10px;min-width:60px}
+}
 
-/* ===== DEPOSIT TRACKER ===== */
+/* ===== SCROLL NAV STRIP ===== */
+.cal-nav-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:.5rem}
+.scroll-nav{display:flex;overflow-x:auto;gap:4px;padding:6px 2px 8px;margin-bottom:.75rem;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--border2) transparent}
+.scroll-nav::-webkit-scrollbar{height:4px}
+.scroll-nav::-webkit-scrollbar-track{background:transparent}
+.scroll-nav::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+.snav-week{display:flex;gap:3px;flex-shrink:0;scroll-snap-align:start;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:4px;cursor:pointer;transition:all .15s}
+.snav-week:hover{border-color:var(--border2)}
+.snav-week.active{background:var(--text);border-color:var(--text)}
+.snav-day{display:flex;flex-direction:column;align-items:center;padding:4px 7px;border-radius:7px;min-width:34px;transition:background .1s}
+.snav-week.active .snav-day{color:#fff}
+.snav-day-name{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;opacity:.6;line-height:1}
+.snav-day-num{font-size:14px;font-weight:700;line-height:1.2;margin-top:1px}
+.snav-day.snd-today{background:var(--today-c);border-radius:7px;color:#fff}
+.snav-week.active .snav-day.snd-today{background:rgba(255,255,255,.25)}
+.snav-month-chip{display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;scroll-snap-align:start;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:6px 14px;cursor:pointer;transition:all .15s;min-width:80px}
+.snav-month-chip:hover{border-color:var(--border2)}
+.snav-month-chip.active{background:var(--text);border-color:var(--text);color:#fff}
+.snav-month-chip .sm-label{font-size:11px;font-weight:700;letter-spacing:.02em}
+.snav-month-chip .sm-year{font-size:9px;opacity:.6;margin-top:1px}
+/* ===== SCROLL NAV STRIP ===== */
 .deposit-bar-wrap{margin:6px 0 2px}
 .deposit-bar-bg{background:var(--surface2);border-radius:20px;height:6px;overflow:hidden}
 .deposit-bar-fill{background:var(--paid);height:6px;border-radius:20px;transition:width .3s}
@@ -434,16 +486,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     <div class="li"><div class="ld" style="background:#b45309;border:1px solid #fcd34d"></div>With advance</div>
     <div class="li"><div class="ld" style="background:#1d4ed8;border:1px solid #93c5fd"></div>Walk-in / No advance</div>
   </div>
-  <div class="cal-nav">
-    <button class="cnbtn" onclick="changeNav('rooms',-1)">&#8592;</button>
-    <button class="cnbtn" onclick="goToday('rooms')">Today</button>
-    <button class="cnbtn" onclick="changeNav('rooms',1)">&#8594;</button>
+  <div class="cal-nav-top">
     <span class="nav-title" id="rooms-nav-title"></span>
     <div class="view-toggle">
       <button class="vtbtn active" id="vt-rooms-week" onclick="setView('rooms','week')">Week</button>
       <button class="vtbtn" id="vt-rooms-month" onclick="setView('rooms','month')">Month</button>
     </div>
   </div>
+  <div class="scroll-nav" id="scroll-nav-rooms"></div>
   <div class="cal-wrap" id="rooms-cal"></div>
 </div>
 
@@ -455,16 +505,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     <div class="li"><div class="ld" style="background:#b45309;border:1px solid #fcd34d"></div>With advance</div>
     <div class="li"><div class="ld" style="background:#0e7490;border:1px solid #67e8f9"></div>Walk-in / Cottage</div>
   </div>
-  <div class="cal-nav">
-    <button class="cnbtn" onclick="changeNav('cot',-1)">&#8592;</button>
-    <button class="cnbtn" onclick="goToday('cot')">Today</button>
-    <button class="cnbtn" onclick="changeNav('cot',1)">&#8594;</button>
+  <div class="cal-nav-top">
     <span class="nav-title" id="cot-nav-title"></span>
     <div class="view-toggle">
       <button class="vtbtn active" id="vt-cot-week" onclick="setView('cot','week')">Week</button>
       <button class="vtbtn" id="vt-cot-month" onclick="setView('cot','month')">Month</button>
     </div>
   </div>
+  <div class="scroll-nav" id="scroll-nav-cot"></div>
   <div class="cal-wrap" id="cot-cal"></div>
 </div>
 
@@ -482,16 +530,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     <div class="li"><div class="ld" style="background:#b45309;border:1px solid #fcd34d"></div>With advance</div>
     <div class="li"><div class="ld" style="background:#be185d;border:1px solid #f9a8d4"></div>Walk-in / Function Hall</div>
   </div>
-  <div class="cal-nav">
-    <button class="cnbtn" onclick="changeNav('fh',-1)">&#8592;</button>
-    <button class="cnbtn" onclick="goToday('fh')">Today</button>
-    <button class="cnbtn" onclick="changeNav('fh',1)">&#8594;</button>
+  <div class="cal-nav-top">
     <span class="nav-title" id="fh-nav-title"></span>
     <div class="view-toggle">
       <button class="vtbtn active" id="vt-fh-week" onclick="setView('fh','week')">Week</button>
       <button class="vtbtn" id="vt-fh-month" onclick="setView('fh','month')">Month</button>
     </div>
   </div>
+  <div class="scroll-nav" id="scroll-nav-fh"></div>
   <div class="cal-wrap" id="fh-cal"></div>
 </div>
 
@@ -903,6 +949,56 @@ function getMonthData(off=0){
   return {days,label:fmtMonth(base)};
 }
 
+/* ===== SCROLL NAV STRIP ===== */
+function renderScrollNav(sec){
+  const el=document.getElementById('scroll-nav-'+sec);
+  if(!el) return;
+  const isWeek=views[sec]==='week';
+  const td=today();
+  el.innerHTML='';
+
+  if(isWeek){
+    // Show 8 weeks: 4 before and 4 after current week offset
+    const range=[-4,-3,-2,-1,0,1,2,3,4];
+    range.forEach(off=>{
+      const days=getWeekDates(off);
+      const chip=document.createElement('div');
+      chip.className='snav-week'+(off===navs[sec]?' active':'');
+      days.forEach((d,i)=>{
+        const ds=fmt(d);
+        const dn=['M','T','W','T','F','S','S'][i];
+        const day=document.createElement('div');
+        day.className='snav-day'+(ds===td?' snd-today':'');
+        day.innerHTML=`<span class="snav-day-name">${dn}</span><span class="snav-day-num">${d.getDate()}</span>`;
+        chip.appendChild(day);
+      });
+      chip.onclick=()=>{navs[sec]=off;renderSection(sec);};
+      el.appendChild(chip);
+    });
+    // Scroll active chip into center
+    setTimeout(()=>{
+      const active=el.querySelector('.snav-week.active');
+      if(active) active.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+    },50);
+  } else {
+    // Month view: show 12 months (-6 to +6)
+    const range=[-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6];
+    const now=new Date();
+    range.forEach(off=>{
+      const base=new Date(now.getFullYear(),now.getMonth()+off,1);
+      const chip=document.createElement('div');
+      chip.className='snav-month-chip'+(off===navs[sec]?' active':'');
+      chip.innerHTML=`<span class="sm-label">${base.toLocaleDateString('en-PH',{month:'short'})}</span><span class="sm-year">${base.getFullYear()}</span>`;
+      chip.onclick=()=>{navs[sec]=off;renderSection(sec);};
+      el.appendChild(chip);
+    });
+    setTimeout(()=>{
+      const active=el.querySelector('.snav-month-chip.active');
+      if(active) active.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+    },50);
+  }
+}
+
 /* ===== NAV ===== */
 function changeNav(sec,n){navs[sec]+=n;renderSection(sec);}
 function goToday(sec){navs[sec]=0;renderSection(sec);}
@@ -929,6 +1025,7 @@ function dotColor(status,kind){
 
 /* ===== RENDER ===== */
 function renderSection(sec){
+  renderScrollNav(sec);
   if(views[sec]==='week') renderWeek(sec);
   else renderMonth(sec);
   save();
@@ -964,7 +1061,7 @@ function renderWeek(sec){
   days.forEach((d,i)=>{
     const h=document.createElement('div');
     h.className='cal-head'+(fmt(d)===td?' th':'');
-    h.textContent=DN[i]+' '+d.getDate();
+    h.innerHTML=`<span class="hday">${DN[i]}</span><span class="hdate">${d.getDate()}</span>`;
     grid.appendChild(h);
   });
   venues.forEach(venue=>{
@@ -974,7 +1071,7 @@ function renderWeek(sec){
       ? `${peso(venue.price)}/4hrs<br>+${peso(venue.ext)}/hr ext`
       : venue.price ? peso(venue.price) : '';
     lbl.innerHTML=`<div>
-      <div class="rn">${venue.icon} ${venue.name}</div>
+      <div class="rn">${venue.icon} <span class="rn-full">${venue.name}</span></div>
       <div class="rt">${venue.type||''}</div>
       <div class="rc">${venue.cap?'max '+venue.cap+' pax':''}</div>
       <div class="rc" style="color:var(--adv);font-weight:600;margin-top:2px">${rateNote}</div>
@@ -1049,7 +1146,7 @@ function renderMonth(sec){
   const area=document.getElementById(calId(sec));
   area.innerHTML='';
   const grid=document.createElement('div');grid.className='cal-grid month-grid';
-  ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach(n=>{const h=document.createElement('div');h.className='cal-head';h.textContent=n;grid.appendChild(h);});
+  ['M','T','W','T','F','S','S'].forEach((n,i)=>{const full=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i];const h=document.createElement('div');h.className='cal-head';h.innerHTML=`<span class="hday" style="font-size:10px;letter-spacing:0">${full}</span>`;grid.appendChild(h);});
   const kindFilter=sec==='rooms'?'room':sec==='cot'?'cottage':'fh'; // FH tab only shows FH bookings in calendar
   days.forEach(({date,thisMonth})=>{
     const ds=fmt(date);
