@@ -159,6 +159,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 /* MODAL */
 .mbg{display:none;position:fixed;inset:0;background:rgba(20,18,12,.45);z-index:200;align-items:center;justify-content:center;padding:1rem}
 .mbg.open{display:flex}
+#pin-mbg{z-index:400}
+.mbg.open{display:flex}
 .modal{background:var(--surface);border-radius:var(--rlg);border:1px solid var(--border);padding:1.5rem;width:480px;max-width:100%;position:relative;box-shadow:0 16px 56px rgba(0,0,0,.2);max-height:92vh;overflow-y:auto}
 .modal h2{font-size:17px;font-weight:600;color:var(--text);margin-bottom:1.25rem;letter-spacing:-.02em}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -2251,38 +2253,48 @@ function showToast(msg,color){
 }
 
 function deleteBooking(){
-  if(!editingId)return;
-  const bk=bookings.find(b=>b.id===editingId);
-  if(!bk)return;
-  const v=ALL_VENUES.find(x=>x.id===bk.venueId);
+  if(!editingId) return;
+  const bk = bookings.find(b=>b.id===editingId);
+  if(!bk) return;
+  const v = ALL_VENUES.find(x=>x.id===bk.venueId);
+  // Capture everything NOW before any modal closes and resets state
+  const capturedId   = editingId;
+  const capturedName = bk.name;
+  const capturedVenue= v ? v.name : 'Unknown';
+  const capturedDate = bk.date;
+  const capturedTotal= bk.total || 0;
+
   openPinModal((user)=>{
-    const deletedName=bk.name;
-    // log deletion
+    // Use captured values — editingId may have been cleared by now
+    const stillExists = bookings.find(b=>b.id===capturedId);
+    if(!stillExists){ showToast('⚠️ Booking not found','#b45309'); return; }
+
     deleteLog.unshift({
       ts: new Date().toISOString(),
       deletedBy: user.name,
       userId: user.id,
-      bookingName: bk.name,
-      venue: v?v.name:'Unknown',
-      date: bk.date,
-      total: bk.total||0,
+      bookingName: capturedName,
+      venue: capturedVenue,
+      date: capturedDate,
+      total: capturedTotal,
     });
     saveDelLog();
-    // remove booking + any linked cottage
-    bookings=bookings.filter(b=>b.id!==editingId&&b.linkedRoom!==editingId);
-    editingId=null;
+
+    bookings = bookings.filter(b=>b.id!==capturedId && b.linkedRoom!==capturedId);
+    editingId = null;
     save();
     closeModal();
-    // refresh every view so deletion is visible everywhere
     ['rooms','cot','fh'].forEach(s=>renderSection(s));
     renderList();
     renderOverview();
-    showToast('🗑️ Deleted: '+deletedName,'#dc2626');
+    showToast('🗑️ Deleted: '+capturedName, '#dc2626');
   });
 }
 
 function closeModal(){document.getElementById('mbg').classList.remove('open');}
-document.getElementById('mbg').addEventListener('click',e=>{if(e.target===document.getElementById('mbg'))closeModal();});
+document.getElementById('mbg').addEventListener('click',e=>{
+  if(e.target===document.getElementById('mbg') && !document.getElementById('pin-mbg').classList.contains('open')) closeModal();
+});
 
 /* ===== MONTHLY STATEMENT ===== */
 function populateMonthSelector(){
