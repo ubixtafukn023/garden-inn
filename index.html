@@ -710,7 +710,7 @@ const USERS = [
   {id:'u1', name:'Riza',   role:'Staff', pin:'7392', avatar:'R', color:'#6d28d9'},
   {id:'u2', name:'Ubix',   role:'Staff', pin:'5814', avatar:'U', color:'#0e7490'},
   {id:'u3', name:'Merlie', role:'Staff', pin:'2967', avatar:'M', color:'#be185d'},
-  {id:'u4', name:'Regine', role:'Staff', pin:'4153', avatar:'G', color:'#15803d'},
+  {id:'u4', name:'Regine', role:'Staff', pin:'4153', avatar:'R', color:'#15803d'},
 ];
 
 let currentUser = null;
@@ -812,6 +812,7 @@ function openDelScreen(bookingId){
   delPendingId   = bookingId;
   delPendingUser = null;
   delPinEntry    = '';
+  delPendingDayDate = bk.date || '';  // store so we can refresh popup after delete
   const v = ALL_VENUES.find(x=>x.id===bk.venueId);
   // set guest label
   document.getElementById('del-guest-label').textContent = '👤 ' + bk.name + (v?' · '+v.name:'');
@@ -955,6 +956,13 @@ function delExecute(){
   renderList();
   renderOverview();
   showToast('🗑️ Deleted: '+deletedName, '#dc2626');
+  // If deleted from within a day context, refresh or close the day popup
+  if(delPendingDayDate){
+    const remaining=bookings.filter(b=>dateInRange(delPendingDayDate,b.date,b.checkout||b.date));
+    const kindFilter=dayPopupSec==='rooms'?'room':dayPopupSec==='cot'?'cottage':'fh';
+    const kindFiltered=remaining.filter(b=>{const v=ALL_VENUES.find(x=>x.id===b.venueId);return v&&v.kind===kindFilter;});
+    if(kindFiltered.length>0) openDayPopup(dayPopupSec,delPendingDayDate,kindFiltered);
+  }
 }
 
 /* ===== TODAY BAR ===== */
@@ -1089,8 +1097,15 @@ function pillAmountLabel(bk){
     if(dep>0) return `↑${peso(dep)} bal:${peso(bal)}`;
     return `bal:${peso(bk.total)}`;
   }
+  if(bk.status==='gcash'){
+    const amt=bk.gcashamount||0;
+    if(amt>0&&amt<bk.total){
+      const bal=Math.max(0,bk.total-amt);
+      return `📱${peso(amt)} bal:${peso(bal)}`;
+    }
+    return peso(bk.total);
+  }
   if(bk.status==='paid') return peso(bk.total);
-  if(bk.status==='gcash') return peso(bk.total);
   return peso(bk.total); // walk-in
 }
 
@@ -1220,6 +1235,53 @@ function calId(sec){return sec==='rooms'?'rooms-cal':sec==='cot'?'cot-cal':'fh-c
 function navId(sec){return `${sec}-nav-title`;}
 function secFromVenue(kind){return kind==='room'?'rooms':kind==='cottage'?'cot':'fh';}
 
+/* ===== GROUP BOOKINGS BY GUEST (for combined pills) ===== */
+function groupBookingsByGuest(bks, ds){
+  // Returns an array of "guest groups": each has a representative booking + all bookings for that name
+  const map = new Map();
+  bks.forEach(bk=>{
+    const key = bk.name.trim().toLowerCase();
+    if(!map.has(key)) map.set(key, []);
+    map.get(key).push(bk);
+  });
+  return [...map.values()].map(group=>{
+    // Sort: checkin-day first, then by venueId
+    group.sort((a,b)=>{ if(a.date===ds&&b.date!==ds) return -1; if(b.date===ds&&a.date!==ds) return 1; return 0; });
+    const rep = group[0]; // representative booking
+    return { rep, group };
+  });
+}
+
+function guestGroupLabel(rep, group, ds, includeVenues=false){
+  const isCheckin = rep.date === ds;
+  const contMark = !isCheckin ? '↩ ' : '';
+  const name = rep.name;
+  if(group.length === 1){
+    const amtLabel = pillAmountLabel(rep);
+    return contMark + name + (amtLabel?' · '+amtLabel:'');
+  }
+  // Multiple venues — show count badge
+  const venues = group.map(b=>{ const v=ALL_VENUES.find(x=>x.id===b.venueId); return v?v.name:b.venueId; });
+  const totalAmt = group.reduce((s,b)=>s+(b.total||0),0);
+  const amtStr = totalAmt ? ' · '+peso(totalAmt) : '';
+  if(includeVenues && venues.length<=3){
+    return contMark + name + ' · ' + venues.join(', ') + amtStr;
+  }
+  return contMark + name + ' ×'+group.length + amtStr;
+}
+
+function guestGroupTooltip(rep, group){
+  const totalAmt = group.reduce((s,b)=>s+(b.total||0),0);
+  const venueLines = group.map(b=>{
+    const v=ALL_VENUES.find(x=>x.id===b.venueId);
+    return (v?v.icon+' '+v.name:'?') + ' — ' + peso(b.total||0);
+  }).join('\n');
+  return rep.name
+    + (group.length>1 ? '\n'+group.length+' venues:\n'+venueLines : '')
+    + '\n'+STATUS_L[rep.status||'wlk']
+    + (totalAmt?'\nTotal: '+peso(totalAmt):'');
+}
+
 function renderWeek(sec){
   const venues=venuesFor(sec); // FH = only FH row
   const days=getWeekDates(navs[sec]);
@@ -1256,46 +1318,66 @@ function renderWeek(sec){
       const cell=document.createElement('div');
       cell.className='cal-cell'+(ds===td?' tc':'');
       const bks=bookings.filter(b=>b.venueId===venue.id&&dateInRange(ds,b.date,b.checkout||b.date));
-      const visible=bks.slice(0,2);
-      const hidden=bks.slice(2);
-      visible.forEach(bk=>{
+      // Group by guest name — combine multiple rooms for same guest into one pill
+      const groups=groupBookingsByGuest(bks,ds);
+      const visibleGroups=groups.slice(0,2);
+      const hiddenGroups=groups.slice(2);
+      visibleGroups.forEach(({rep,group})=>{
         const pill=document.createElement('div');
-        pill.className='bpill '+pillCls(bk.status,venue.kind);
+        pill.className='bpill '+pillCls(rep.status,venue.kind);
         const dot=document.createElement('span');dot.className='pdot';
-        dot.style.background=dotColor(bk.status,venue.kind);
+        dot.style.background=dotColor(rep.status,venue.kind);
         pill.appendChild(dot);
-        const isCheckin=bk.date===ds;
-        const amtLabel=pillAmountLabel(bk);
-        const contMark=!isCheckin?'↩ ':'';
-        const label=contMark+bk.name+(amtLabel?' · '+amtLabel:'');
-        pill.appendChild(document.createTextNode(label));
-        const nights=calcNights(bk.date,bk.checkout||bk.date);
-        const bal=bk.status==='adv'?Math.max(0,(bk.total||0)-(bk.deposit||0)):0;
-        pill.title=`${bk.name}\n${STATUS_L[bk.status]||'Walk-in'}`
-          +(nights>1?`\n${fmtFull(bk.date)} – ${fmtFull(bk.checkout)} (${nights} nights)`:'')
-          +(bk.total?`\nTotal: ${peso(bk.total)}`:'')
-          +(bk.status==='adv'?`\nDeposit paid: ${peso(bk.deposit||0)}\nBalance due: ${peso(bal)}`:'')
-          +(bk.note?'\n'+bk.note:'');
-        pill.onclick=(e)=>{e.stopPropagation();openEdit(bk.id);};
+        if(group.length>1){
+          // Combined pill: show name + count badge
+          const isCheckin=rep.date===ds;
+          const contMark=!isCheckin?'↩ ':'';
+          pill.appendChild(document.createTextNode(contMark+rep.name));
+          const badge=document.createElement('span');
+          badge.style.cssText='background:rgba(0,0,0,.15);border-radius:20px;padding:0 5px;font-size:9px;font-weight:700;margin-left:3px';
+          badge.textContent='×'+group.length;
+          pill.appendChild(badge);
+        } else {
+          const isCheckin=rep.date===ds;
+          const amtLabel=pillAmountLabel(rep);
+          const contMark=!isCheckin?'↩ ':'';
+          pill.appendChild(document.createTextNode(contMark+rep.name+(amtLabel?' · '+amtLabel:'')));
+        }
+        pill.title=guestGroupTooltip(rep,group);
+        if(group.length>1){
+          // Click opens day popup filtered to this guest's bookings
+          pill.onclick=(e)=>{e.stopPropagation();openDayPopup(sec,ds,group);};
+        } else {
+          pill.onclick=(e)=>{e.stopPropagation();openEdit(rep.id);};
+        }
         cell.appendChild(pill);
       });
-      if(hidden.length>0){
+      if(hiddenGroups.length>0){
         const wrap=document.createElement('div');wrap.className='overflow-wrap';
         const more=document.createElement('div');
         more.className='more-pill';
-        more.textContent='+'+hidden.length+' more';
+        more.textContent='+'+hiddenGroups.length+' more';
         const drop=document.createElement('div');drop.className='overflow-dropdown';
-        hidden.forEach(bk=>{
+        hiddenGroups.forEach(({rep,group})=>{
           const pill=document.createElement('div');
-          pill.className='bpill '+pillCls(bk.status,venue.kind);
+          pill.className='bpill '+pillCls(rep.status,venue.kind);
           const dot=document.createElement('span');dot.className='pdot';
-          dot.style.background=dotColor(bk.status,venue.kind);
+          dot.style.background=dotColor(rep.status,venue.kind);
           pill.appendChild(dot);
-          const amtLabel=pillAmountLabel(bk);
-          const isCheckin=bk.date===ds;
+          const isCheckin=rep.date===ds;
           const contMark=!isCheckin?'↩ ':'';
-          pill.appendChild(document.createTextNode(contMark+bk.name+(amtLabel?' · '+amtLabel:'')));
-          pill.onclick=(e)=>{e.stopPropagation();drop.classList.remove('open');openEdit(bk.id);};
+          if(group.length>1){
+            pill.appendChild(document.createTextNode(contMark+rep.name));
+            const badge=document.createElement('span');
+            badge.style.cssText='background:rgba(0,0,0,.15);border-radius:20px;padding:0 5px;font-size:9px;font-weight:700;margin-left:3px';
+            badge.textContent='×'+group.length;
+            pill.appendChild(badge);
+            pill.onclick=(e)=>{e.stopPropagation();drop.classList.remove('open');openDayPopup(sec,ds,group);};
+          } else {
+            const amtLabel=pillAmountLabel(rep);
+            pill.appendChild(document.createTextNode(contMark+rep.name+(amtLabel?' · '+amtLabel:'')));
+            pill.onclick=(e)=>{e.stopPropagation();drop.classList.remove('open');openEdit(rep.id);};
+          }
           drop.appendChild(pill);
         });
         more.onclick=(e)=>{e.stopPropagation();drop.classList.toggle('open');};
@@ -1321,32 +1403,58 @@ function renderMonth(sec){
   area.innerHTML='';
   const grid=document.createElement('div');grid.className='cal-grid month-grid';
   ['M','T','W','T','F','S','S'].forEach((n,i)=>{const full=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i];const h=document.createElement('div');h.className='cal-head';h.innerHTML=`<span class="hday" style="font-size:10px;letter-spacing:0">${full}</span>`;grid.appendChild(h);});
-  const kindFilter=sec==='rooms'?'room':sec==='cot'?'cottage':'fh'; // FH tab only shows FH bookings in calendar
+  const kindFilter=sec==='rooms'?'room':sec==='cot'?'cottage':'fh';
   days.forEach(({date,thisMonth})=>{
     const ds=fmt(date);
     const cell=document.createElement('div');
     cell.className='mc'+(ds===td?' tm':'')+((!thisMonth)?' om':'');
     const dn=document.createElement('div');dn.className='mdn';dn.textContent=date.getDate();cell.appendChild(dn);
     const dayBks=bookings.filter(b=>{const v=ALL_VENUES.find(x=>x.id===b.venueId);return v&&v.kind===kindFilter&&dateInRange(ds,b.date,b.checkout||b.date);});
-    dayBks.slice(0,3).forEach(bk=>{
-      const v=ALL_VENUES.find(x=>x.id===bk.venueId);
+
+    // Group by guest name across all venues
+    const guestGroups=groupBookingsByGuest(dayBks,ds);
+
+    guestGroups.slice(0,3).forEach(({rep,group})=>{
+      const v=ALL_VENUES.find(x=>x.id===rep.venueId);
       const pill=document.createElement('div');
-      pill.className='mpill '+pillCls(bk.status,v?v.kind:'room');
-      const rt=v?ROOM_TYPES.find(x=>x.key===v.typeKey):null;
-      const vLabel=rt?rt.label:(v?v.name:'');
-      const amtLabel=pillAmountLabel(bk);
-      const isCheckin=bk.date===ds;
+      pill.className='mpill '+pillCls(rep.status,v?v.kind:'room');
+      const isCheckin=rep.date===ds;
       const contMark=!isCheckin?'↩ ':'';
-      pill.textContent=contMark+(vLabel?vLabel+': ':'')+bk.name+(amtLabel?' · '+amtLabel:'');
-      const bal=bk.status==='adv'?Math.max(0,(bk.total||0)-(bk.deposit||0)):0;
-      pill.title=bk.name+' — '+(v?v.name:'')+' — '+(STATUS_L[bk.status]||'')
-        +(bk.total?'\nTotal: '+peso(bk.total):'')
-        +(bk.status==='adv'?'\nDeposit: '+peso(bk.deposit||0)+'\nBalance: '+peso(bal):'');
-      pill.onclick=(e)=>{e.stopPropagation();openEdit(bk.id);};
+
+      if(group.length>1){
+        // Multi-venue: "Name · Venue1, Venue2" or "Name ×N"
+        const venueNames=group.map(b=>{
+          const vv=ALL_VENUES.find(x=>x.id===b.venueId);
+          if(!vv) return '';
+          const rt=ROOM_TYPES.find(x=>x.key===vv.typeKey);
+          return rt?rt.label.replace(' pax','').replace(' Room',''):vv.name;
+        }).filter(Boolean);
+        const totalAmt=group.reduce((s,b)=>s+(b.total||0),0);
+        const amtStr=totalAmt?' · '+peso(totalAmt):'';
+        if(venueNames.length<=2){
+          pill.textContent=contMark+rep.name+' · '+venueNames.join(', ')+amtStr;
+        } else {
+          pill.textContent=contMark+rep.name+' ×'+group.length+amtStr;
+        }
+        pill.title=guestGroupTooltip(rep,group);
+        pill.onclick=(e)=>{e.stopPropagation();openDayPopup(sec,ds,group);};
+      } else {
+        const rt=v?ROOM_TYPES.find(x=>x.key===v.typeKey):null;
+        const vLabel=rt?rt.label:(v?v.name:'');
+        const amtLabel=pillAmountLabel(rep);
+        pill.textContent=contMark+(vLabel?vLabel+': ':'')+rep.name+(amtLabel?' · '+amtLabel:'');
+        const bal=rep.status==='adv'?Math.max(0,(rep.total||0)-(rep.deposit||0)):0;
+        pill.title=rep.name+' — '+(v?v.name:'')+' — '+(STATUS_L[rep.status]||'')
+          +(rep.total?'\nTotal: '+peso(rep.total):'')
+          +(rep.status==='adv'?'\nDeposit: '+peso(rep.deposit||0)+'\nBalance: '+peso(bal):'');
+        pill.onclick=(e)=>{e.stopPropagation();openEdit(rep.id);};
+      }
       cell.appendChild(pill);
     });
-    if(dayBks.length>3){
-      const m=document.createElement('div');m.className='more-lnk';m.textContent='+'+(dayBks.length-3)+' more';
+
+    if(guestGroups.length>3){
+      const m=document.createElement('div');m.className='more-lnk';
+      m.textContent='+'+(guestGroups.length-3)+' more';
       m.onclick=(e)=>{e.stopPropagation();openDayPopup(sec,ds,dayBks);};
       cell.appendChild(m);
     }
@@ -1513,6 +1621,7 @@ function calcTotal(section){
   } else {
     const base=venue?venue.price:0;
     const extbed=parseInt(document.getElementById('f-extbed')?.value||0)||0;
+    const extpax=parseInt(document.getElementById('f-extpax')?.value||0)||0;
     const cotId=document.getElementById('f-cottage')?.value||'';
     const cotVenue=cotId?ALL_VENUES.find(v=>v.id===cotId):null;
     // Multi-night calculation
@@ -1520,13 +1629,15 @@ function calcTotal(section){
     const checkout=document.getElementById('f-checkout')?.value||'';
     const nights=calcNights(checkin, checkout);
     const roomTotal=base*nights;
-    const extbedTotal=extbed*350*nights;
-    total=roomTotal+extbedTotal+(cotVenue?cotVenue.price*nights:0);
+    const extbedTotal=extbed*250*nights;
+    const extpaxTotal=extpax*100*nights;
+    total=roomTotal+extbedTotal+extpaxTotal+(cotVenue?cotVenue.price*nights:0);
     if(base){
       rows+=`<div class="pr-row"><span>${venue.name}</span><span class="mono">${peso(base)}/night</span></div>`;
       if(nights>1) rows+=`<div class="pr-row" style="opacity:.8"><span>× ${nights} nights</span><span class="mono">${peso(roomTotal)}</span></div>`;
     }
     if(extbed) rows+=`<div class="pr-row"><span>Extra bed ×${extbed}${nights>1?' × '+nights+' nights':''}</span><span class="mono">${peso(extbedTotal)}</span></div>`;
+    if(extpax) rows+=`<div class="pr-row"><span>Extra person ×${extpax}${nights>1?' × '+nights+' nights':''}</span><span class="mono">${peso(extpaxTotal)}</span></div>`;
     if(cotVenue) rows+=`<div class="pr-row"><span>🌿 ${cotVenue.name}${nights>1?' × '+nights+' nights':''}</span><span class="mono">${peso(cotVenue.price*nights)}</span></div>`;
     if(!rows) rows=`<div class="pr-row" style="opacity:.4">Select options to see total</div>`;
   }
@@ -1598,49 +1709,90 @@ function openDayPopup(sec, ds, dayBks){
   if(!dayBks||!dayBks.length){
     list.innerHTML='<div class="dp-empty">No bookings yet for this date.</div>';
   } else {
-    dayBks.forEach(bk=>{
-      const v=ALL_VENUES.find(x=>x.id===bk.venueId);
+    // Group by guest name
+    const guestGroups=groupBookingsByGuest(dayBks,ds);
+    guestGroups.forEach(({rep,group})=>{
+      const v=ALL_VENUES.find(x=>x.id===rep.venueId);
       const rt=v?ROOM_TYPES.find(x=>x.key===v.typeKey):null;
-      const vLabel=rt?(v.icon+' '+rt.label):(v?v.icon+' '+v.name:'Unknown');
-      const item=document.createElement('div');item.className='dp-item';
-      const statusColors={paid:'var(--paid)',adv:'var(--adv)',wlk:'var(--wlk)',gcash:'var(--gcash)'};
-      const sc=statusColors[bk.status]||'var(--text2)';
-      const nights=calcNights(bk.date, bk.checkout||bk.date);
-      const isCheckin=bk.date===ds;
+      const isCheckin=rep.date===ds;
       const contLabel=!isCheckin?'<span style="font-size:10px;background:#f3f4f6;color:#6b7280;border-radius:20px;padding:1px 6px;margin-left:4px">cont.</span>':'';
+      const statusColors={paid:'var(--paid)',adv:'var(--adv)',wlk:'var(--wlk)',gcash:'var(--gcash)'};
+      const sc=statusColors[rep.status]||'var(--text2)';
 
-      // Payment display
-      let paymentHtml='';
-      if(bk.status==='adv'){
-        const dep=bk.deposit||0;
-        const bal=Math.max(0,(bk.total||0)-dep);
-        paymentHtml=`
-          <div style="margin-top:5px;display:flex;flex-direction:column;align-items:flex-end;gap:2px">
-            <div style="font-size:11px;color:var(--text2)">Total: <span style="font-weight:600;font-family:'DM Mono',monospace;color:var(--text)">${peso(bk.total||0)}</span></div>
-            <div style="font-size:11px;color:var(--adv)">Paid: <span style="font-weight:700;font-family:'DM Mono',monospace">${peso(dep)}</span></div>
-            <div style="font-size:12px;font-weight:700;color:#dc2626;font-family:'DM Mono',monospace;background:#fee2e2;border-radius:6px;padding:1px 7px">Bal: ${peso(bal)}</div>
+      if(group.length>1){
+        // Multi-venue guest card
+        const totalAmt=group.reduce((s,b)=>s+(b.total||0),0);
+        const venueLines=group.map(b=>{
+          const vv=ALL_VENUES.find(x=>x.id===b.venueId);
+          const nights=calcNights(b.date,b.checkout||b.date);
+          return `<div onclick="event.stopPropagation();closeDayPopup();openEdit('${b.id}')" style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border-radius:6px;cursor:pointer;background:var(--surface);margin-bottom:3px;gap:6px">
+            <span style="font-size:12px;color:var(--text2)">${vv?vv.icon+' '+vv.name:'?'}${nights>1?' · '+nights+'n':''}</span>
+            <span style="font-size:12px;font-weight:600;font-family:'DM Mono',monospace;color:var(--text)">${peso(b.total||0)}</span>
           </div>`;
-      } else if(bk.status==='paid'){
-        paymentHtml=`<div style="margin-top:5px;font-size:13px;font-weight:700;color:var(--paid);font-family:'DM Mono',monospace">${peso(bk.total||0)}</div>`;
-      } else if(bk.status==='gcash'){
-        paymentHtml=`<div style="margin-top:5px;font-size:13px;font-weight:700;color:var(--gcash);font-family:'DM Mono',monospace">${peso(bk.total||0)}</div>`;
+        }).join('');
+        const item=document.createElement('div');
+        item.className='dp-item';
+        item.style.flexDirection='column';
+        item.style.gap='6px';
+        item.innerHTML=`
+          <div style="display:flex;align-items:flex-start;gap:8px;width:100%">
+            <div style="width:10px;height:10px;border-radius:50%;background:${sc};flex-shrink:0;margin-top:4px"></div>
+            <div style="flex:1;min-width:0">
+              <div class="dp-guest" style="font-weight:700;color:var(--text);font-size:14px">${rep.name}${contLabel}</div>
+              <div class="dp-guest" style="color:var(--text2)">${group.length} venues booked · ${STATUS_L[rep.status]||'Walk-in'}</div>
+            </div>
+            <div>
+              <span class="badge ${rep.status}">${STATUS_L[rep.status]||'Walk-in'}</span>
+              <div style="margin-top:4px;font-size:13px;font-weight:700;color:var(--text);font-family:'DM Mono',monospace;text-align:right">${peso(totalAmt)}</div>
+            </div>
+          </div>
+          <div style="width:100%;padding-left:18px">${venueLines}</div>`;
+        list.appendChild(item);
       } else {
-        paymentHtml=bk.total?`<div style="margin-top:5px;font-size:13px;font-weight:700;color:var(--text);font-family:'DM Mono',monospace">${peso(bk.total)}</div>`:'';
+        // Single booking — original style
+        const vLabel=rt?(v.icon+' '+rt.label):(v?v.icon+' '+v.name:'Unknown');
+        const item=document.createElement('div');item.className='dp-item';
+        const nights=calcNights(rep.date, rep.checkout||rep.date);
+        let paymentHtml='';
+        if(rep.status==='adv'){
+          const dep=rep.deposit||0;
+          const bal=Math.max(0,(rep.total||0)-dep);
+          paymentHtml=`<div style="margin-top:5px;display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+            <div style="font-size:11px;color:var(--text2)">Total: <span style="font-weight:600;font-family:'DM Mono',monospace;color:var(--text)">${peso(rep.total||0)}</span></div>
+            <div style="font-size:11px;color:var(--adv)">Paid: <span style="font-weight:700;font-family:'DM Mono',monospace">${peso(dep)}</span></div>
+            <div style="font-size:12px;font-weight:700;color:#dc2626;font-family:'DM Mono',monospace;background:#fee2e2;border-radius:6px;padding:1px 7px">Bal: ${peso(Math.max(0,(rep.total||0)-dep))}</div>
+          </div>`;
+        } else if(rep.status==='gcash'){
+          const amt=rep.gcashamount||0;
+          if(amt>0&&amt<(rep.total||0)){
+            const bal=Math.max(0,(rep.total||0)-amt);
+            paymentHtml=`<div style="margin-top:5px;display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+              <div style="font-size:11px;color:var(--text2)">Total: <span style="font-weight:600;font-family:'DM Mono',monospace">${peso(rep.total||0)}</span></div>
+              <div style="font-size:11px;color:var(--gcash)">GCash: <span style="font-weight:700;font-family:'DM Mono',monospace">${peso(amt)}</span></div>
+              <div style="font-size:12px;font-weight:700;color:#dc2626;font-family:'DM Mono',monospace;background:#fee2e2;border-radius:6px;padding:1px 7px">Bal: ${peso(bal)}</div>
+            </div>`;
+          } else {
+            paymentHtml=`<div style="margin-top:5px;font-size:13px;font-weight:700;color:var(--gcash);font-family:'DM Mono',monospace">${peso(rep.total||0)}</div>`;
+          }
+        } else if(rep.status==='paid'){
+          paymentHtml=`<div style="margin-top:5px;font-size:13px;font-weight:700;color:var(--paid);font-family:'DM Mono',monospace">${peso(rep.total||0)}</div>`;
+        } else {
+          paymentHtml=rep.total?`<div style="margin-top:5px;font-size:13px;font-weight:700;color:var(--text);font-family:'DM Mono',monospace">${peso(rep.total)}</div>`:'';
+        }
+        item.innerHTML=`
+          <div style="width:10px;height:10px;border-radius:50%;background:${sc};flex-shrink:0;margin-top:2px"></div>
+          <div style="flex:1;min-width:0">
+            <div class="dp-venue">${vLabel}${contLabel}</div>
+            <div class="dp-guest" style="font-weight:600;color:var(--text);font-size:13px;margin-top:2px">${rep.name}</div>
+            <div class="dp-guest">${rep.checkout&&rep.checkout!==rep.date?'Until '+fmtFull(rep.checkout)+(nights>1?' · '+nights+' nights':''):'1 night'}${rep.pax?' · '+rep.pax+' pax':''}</div>
+          </div>
+          <div class="dp-badge-wrap">
+            <span class="badge ${rep.status}">${STATUS_L[rep.status]||'Walk-in'}</span>
+            ${paymentHtml}
+          </div>`;
+        item.onclick=()=>{ closeDayPopup(); openEdit(rep.id); };
+        list.appendChild(item);
       }
-
-      item.innerHTML=`
-        <div style="width:10px;height:10px;border-radius:50%;background:${sc};flex-shrink:0;margin-top:2px"></div>
-        <div style="flex:1;min-width:0">
-          <div class="dp-venue">${vLabel}${contLabel}</div>
-          <div class="dp-guest" style="font-weight:600;color:var(--text);font-size:13px;margin-top:2px">${bk.name}</div>
-          <div class="dp-guest">${bk.checkout&&bk.checkout!==bk.date?'Until '+fmtFull(bk.checkout)+(nights>1?' · '+nights+' nights':''):'1 night'}${bk.pax?' · '+bk.pax+' pax':''}</div>
-        </div>
-        <div class="dp-badge-wrap">
-          <span class="badge ${bk.status}">${STATUS_L[bk.status]||'Walk-in'}</span>
-          ${paymentHtml}
-        </div>`;
-      item.onclick=()=>{ closeDayPopup(); openEdit(bk.id); };
-      list.appendChild(item);
     });
   }
   document.getElementById('dp-add-btn').onclick=()=>{ closeDayPopup(); openAdd(sec,'',ds); };
@@ -1729,8 +1881,13 @@ function openAdd(section,venueId='',date=''){
         <div class="addons-title">➕ Add-ons</div>
         <div class="ao-row">
           <span class="ao-lbl">Extra bed</span>
-          <span class="ao-price">₱350/bed</span>
+          <span class="ao-price">₱250/bed</span>
           <input type="number" class="ao-qty" id="f-extbed" min="0" max="10" value="0" oninput="calcTotal('fh')">
+        </div>
+        <div class="ao-row">
+          <span class="ao-lbl">Extra person</span>
+          <span class="ao-price">₱100/pax</span>
+          <input type="number" class="ao-qty" id="f-extpax" min="0" max="50" value="0" oninput="calcTotal('fh')">
         </div>
       </div>`;
   } else {
@@ -1739,8 +1896,13 @@ function openAdd(section,venueId='',date=''){
         <div class="addons-title">➕ Add-ons</div>
         <div class="ao-row">
           <span class="ao-lbl">Extra bed</span>
-          <span class="ao-price">₱350/bed</span>
+          <span class="ao-price">₱250/bed</span>
           <input type="number" class="ao-qty" id="f-extbed" min="0" max="10" value="0" oninput="calcTotal('${section}')">
+        </div>
+        <div class="ao-row">
+          <span class="ao-lbl">Extra person</span>
+          <span class="ao-price">₱100/pax</span>
+          <input type="number" class="ao-qty" id="f-extpax" min="0" max="50" value="0" oninput="calcTotal('${section}')">
         </div>
       </div>`;
   }
@@ -1768,6 +1930,13 @@ function openAdd(section,venueId='',date=''){
       <label>GCash Reference # <span style="color:var(--gcash);font-weight:700">(Garden Inn)</span></label>
       <input type="text" id="f-gcashref" placeholder="e.g. 1234567890" style="font-family:'DM Mono',monospace">
     </div>
+    <div class="fg" id="gcash-amount-wrap" style="display:none;background:var(--gcash-bg);border:1px solid var(--gcash-bd);border-radius:var(--r);padding:.875rem">
+      <label style="color:var(--gcash)">📱 GCash amount paid (₱)</label>
+      <input type="number" id="f-gcashamount" min="0" placeholder="0" oninput="updateGcashAmountPreview()" style="font-family:'DM Mono',monospace;border-color:var(--gcash-bd)">
+      <div class="deposit-bar-wrap" id="gcash-amount-preview" style="display:none">
+        <div class="deposit-bar-bg"><div class="deposit-bar-fill" id="gcash-amount-fill" style="width:0%;background:var(--gcash)"></div></div>
+        <div class="deposit-labels"><span id="gcash-amount-paid-lbl"></span><span id="gcash-amount-bal-lbl"></span></div>
+      </div>
     <div class="fg">
       <label>Booking type</label>
       <div class="btype-sel">
@@ -1902,6 +2071,13 @@ function buildRoomTypeBody(selDate, selCheckout, selectedTypeKey='', prefVenueId
       <label>GCash Reference # <span style="color:var(--gcash);font-weight:700">(Garden Inn)</span></label>
       <input type="text" id="f-gcashref" placeholder="e.g. 1234567890" style="font-family:'DM Mono',monospace">
     </div>
+    <div class="fg" id="gcash-amount-wrap" style="display:none;background:var(--gcash-bg);border:1px solid var(--gcash-bd);border-radius:var(--r);padding:.875rem">
+      <label style="color:var(--gcash)">📱 GCash amount paid (₱)</label>
+      <input type="number" id="f-gcashamount" min="0" placeholder="0" oninput="updateGcashAmountPreview()" style="font-family:'DM Mono',monospace;border-color:var(--gcash-bd)">
+      <div class="deposit-bar-wrap" id="gcash-amount-preview" style="display:none">
+        <div class="deposit-bar-bg"><div class="deposit-bar-fill" id="gcash-amount-fill" style="width:0%;background:var(--gcash)"></div></div>
+        <div class="deposit-labels"><span id="gcash-amount-paid-lbl"></span><span id="gcash-amount-bal-lbl"></span></div>
+      </div>
     <div class="fg">
       <label>Booking type</label>
       <div class="btype-sel">
@@ -1936,8 +2112,13 @@ function buildRoomTypeBody(selDate, selCheckout, selectedTypeKey='', prefVenueId
       <div class="addons-title">➕ Add-ons</div>
       <div class="ao-row">
         <span class="ao-lbl">Extra bed</span>
-        <span class="ao-price">₱350/bed/night</span>
+        <span class="ao-price">₱250/bed/night</span>
         <input type="number" class="ao-qty" id="f-extbed" min="0" max="10" value="0" oninput="calcRoomTypeTotal()">
+      </div>
+      <div class="ao-row">
+        <span class="ao-lbl">Extra person</span>
+        <span class="ao-price">₱100/pax/night</span>
+        <input type="number" class="ao-qty" id="f-extpax" min="0" max="50" value="0" oninput="calcRoomTypeTotal()">
       </div>
     </div>
     <div class="addons-box" style="border-color:var(--cot-bd);background:#f0fafa">
@@ -2029,17 +2210,20 @@ function calcRoomTypeTotal(){
   const checkout=document.getElementById('f-checkout')?.value||'';
   const nights=calcNights(checkin, checkout);
   const extbed=parseInt(document.getElementById('f-extbed')?.value||0)||0;
+  const extpax=parseInt(document.getElementById('f-extpax')?.value||0)||0;
   const cotId=document.getElementById('f-cottage')?.value||'';
   const cotVenue=cotId?ALL_VENUES.find(v=>v.id===cotId):null;
   let total=0, rows='';
   if(rt){
     const roomTotal=rt.price*nights;
-    const extbedTotal=extbed*350*nights;
+    const extbedTotal=extbed*250*nights;
+    const extpaxTotal=extpax*100*nights;
     const cotTotal=cotVenue?cotVenue.price*nights:0;
-    total=roomTotal+extbedTotal+cotTotal;
+    total=roomTotal+extbedTotal+extpaxTotal+cotTotal;
     rows+=`<div class="pr-row"><span>${rt.icon} ${rt.label}</span><span class="mono">${peso(rt.price)}/night</span></div>`;
     if(nights>1) rows+=`<div class="pr-row" style="opacity:.8"><span>× ${nights} nights</span><span class="mono">${peso(roomTotal)}</span></div>`;
     if(extbed) rows+=`<div class="pr-row"><span>Extra bed ×${extbed}${nights>1?' × '+nights+' nights':''}</span><span class="mono">${peso(extbedTotal)}</span></div>`;
+    if(extpax) rows+=`<div class="pr-row"><span>Extra person ×${extpax}${nights>1?' × '+nights+' nights':''}</span><span class="mono">${peso(extpaxTotal)}</span></div>`;
     if(cotVenue) rows+=`<div class="pr-row"><span>🌿 ${cotVenue.name}${nights>1?' × '+nights+' nights':''}</span><span class="mono">${peso(cotTotal)}</span></div>`;
   } else {
     rows=`<div class="pr-row" style="opacity:.4">Select a room type to see total</div>`;
@@ -2063,16 +2247,11 @@ function saveRoomTypeBooking(){
   const pax=document.getElementById('f-pax').value;
   const note=(document.getElementById('f-note').value||'').trim();
   const extbed=parseInt(document.getElementById('f-extbed')?.value||0)||0;
+  const extpax=parseInt(document.getElementById('f-extpax')?.value||0)||0;
   const contact=(document.getElementById('f-contact')?.value||'').trim();
   const gcashRef=(document.getElementById('f-gcashref')?.value||'').trim();
+  const gcashamount=parseFloat(document.getElementById('f-gcashamount')?.value||0)||0;
   const deposit=parseFloat(document.getElementById('f-deposit')?.value||0)||0;
-  const photoEl=document.getElementById('photo-preview-img');
-  const idPhoto=(photoEl&&photoEl.src&&photoEl.style.display!=='none'&&photoEl.src.startsWith('data:'))?photoEl.src:'';
-  const cotId=document.getElementById('f-cottage')?.value||'';
-  const cotVenue=cotId?ALL_VENUES.find(v=>v.id===cotId):null;
-
-  if(!name){const fn=document.getElementById('f-name');fn.style.borderColor='#dc2626';fn.focus();return;}
-  if(!checkin||!checkout){alert('Please fill in check-in and check-out dates.');return;}
   if(!typeKey){
     const err=document.getElementById('room-type-err');
     if(err){err.style.display='block';err.textContent='⛔ Please select a room type.';}
@@ -2091,7 +2270,7 @@ function saveRoomTypeBooking(){
   }
   const total=calcRoomTypeTotal();
   const newId=uid();
-  bookings.push({id:newId,name,contact,gcashRef,status,btype,venueId:room.id,date:checkin,checkout,pax,extbed,fhHours:0,note,total:total||0,deposit,idPhoto});
+  bookings.push({id:newId,name,contact,gcashRef,gcashamount,status,btype,venueId:room.id,date:checkin,checkout,pax,extbed,extpax,fhHours:0,note,total:total||0,deposit,idPhoto});
   if(cotVenue){
     const nights=calcNights(checkin,checkout);
     bookings.push({id:uid(),name,status,btype,venueId:cotId,date:checkin,checkout,pax,extpax:0,extbed:0,fhHours:0,note:'(with '+name.split(' ')[0]+' — linked from room)',total:cotVenue.price*nights,linkedRoom:newId});
@@ -2142,6 +2321,13 @@ function openFullVenueBooking(){
       <label>GCash Reference #</label>
       <input type="text" id="f-gcashref" placeholder="e.g. 1234567890" style="font-family:'DM Mono',monospace">
     </div>
+    <div class="fg" id="gcash-amount-wrap" style="display:none;background:var(--gcash-bg);border:1px solid var(--gcash-bd);border-radius:var(--r);padding:.875rem">
+      <label style="color:var(--gcash)">📱 GCash amount paid (₱)</label>
+      <input type="number" id="f-gcashamount" min="0" placeholder="0" oninput="updateGcashAmountPreview()" style="font-family:'DM Mono',monospace;border-color:var(--gcash-bd)">
+      <div class="deposit-bar-wrap" id="gcash-amount-preview" style="display:none">
+        <div class="deposit-bar-bg"><div class="deposit-bar-fill" id="gcash-amount-fill" style="width:0%;background:var(--gcash)"></div></div>
+        <div class="deposit-labels"><span id="gcash-amount-paid-lbl"></span><span id="gcash-amount-bal-lbl"></span></div>
+      </div>
     <div class="frow">
       <div class="fg">
         <label>Check-in date</label>
@@ -2270,8 +2456,12 @@ function openEdit(id){
       <div class="addons-box">
         <div class="addons-title">➕ Add-ons</div>
         <div class="ao-row">
-          <span class="ao-lbl">Extra bed</span><span class="ao-price">₱350/bed</span>
+          <span class="ao-lbl">Extra bed</span><span class="ao-price">₱250/bed</span>
           <input type="number" class="ao-qty" id="f-extbed" min="0" max="10" value="${bk.extbed||0}" oninput="calcTotal('${section}')">
+        </div>
+        <div class="ao-row">
+          <span class="ao-lbl">Extra person</span><span class="ao-price">₱100/pax</span>
+          <input type="number" class="ao-qty" id="f-extpax" min="0" max="50" value="${bk.extpax||0}" oninput="calcTotal('${section}')">
         </div>
       </div>`;
   }
@@ -2298,6 +2488,14 @@ function openEdit(id){
     <div class="fg" id="gcash-ref-wrap" style="display:${bk.status==='gcash'?'block':'none'}">
       <label>GCash Reference # <span style="color:var(--gcash);font-weight:700">(Garden Inn)</span></label>
       <input type="text" id="f-gcashref" value="${bk.gcashRef||''}" placeholder="e.g. 1234567890" style="font-family:'DM Mono',monospace">
+    </div>
+    <div class="fg" id="gcash-amount-wrap" style="display:${bk.status==='gcash'?'block':'none'};background:var(--gcash-bg);border:1px solid var(--gcash-bd);border-radius:var(--r);padding:.875rem">
+      <label style="color:var(--gcash)">📱 GCash amount paid (₱)</label>
+      <input type="number" id="f-gcashamount" min="0" value="${bk.gcashamount||0}" placeholder="0" oninput="updateGcashAmountPreview()" style="font-family:'DM Mono',monospace;border-color:var(--gcash-bd)">
+      <div class="deposit-bar-wrap" id="gcash-amount-preview" style="display:none">
+        <div class="deposit-bar-bg"><div class="deposit-bar-fill" id="gcash-amount-fill" style="width:0%;background:var(--gcash)"></div></div>
+        <div class="deposit-labels"><span id="gcash-amount-paid-lbl"></span><span id="gcash-amount-bal-lbl"></span></div>
+      </div>
     </div>
     <div class="fg">
       <label>Booking type</label>
@@ -2374,19 +2572,52 @@ function selStatus(s){
   const fi=document.getElementById('f-status');if(fi)fi.value=s;
   const rw=document.getElementById('gcash-ref-wrap');
   if(rw) rw.style.display=s==='gcash'?'block':'none';
-  // show deposit field only for "With Advance"
+  // show deposit field for "With Advance"
   const dw=document.getElementById('deposit-wrap');
   if(dw){
     dw.style.display=s==='adv'?'block':'none';
     if(s==='adv'){
       setTimeout(()=>{const d=document.getElementById('f-deposit');if(d){d.focus();d.select();}},60);
     } else {
-      // clear deposit if switching away from adv
       const d=document.getElementById('f-deposit');
       if(d) d.value='';
       const dp=document.getElementById('deposit-preview');
       if(dp) dp.style.display='none';
     }
+  }
+  // show gcash amount field for "GCash"
+  const gaw=document.getElementById('gcash-amount-wrap');
+  if(gaw){
+    gaw.style.display=s==='gcash'?'block':'none';
+    if(s!=='gcash'){
+      const ga=document.getElementById('f-gcashamount');
+      if(ga) ga.value='';
+      const gp=document.getElementById('gcash-amount-preview');
+      if(gp) gp.style.display='none';
+    } else {
+      setTimeout(()=>{const ga=document.getElementById('f-gcashamount');if(ga){ga.focus();ga.select();}},60);
+    }
+  }
+}
+function updateGcashAmountPreview(){
+  const ga=document.getElementById('f-gcashamount');
+  const ps=document.getElementById('price-box');
+  const total=ps?parseFloat(ps.dataset.total||0):0;
+  const amt=parseFloat(ga?.value||0)||0;
+  const preview=document.getElementById('gcash-amount-preview');
+  if(!preview) return;
+  if(amt>0&&total>0){
+    const bal=Math.max(0,total-amt);
+    const pct=Math.min(100,Math.round(amt/total*100));
+    preview.style.display='block';
+    const fill=document.getElementById('gcash-amount-fill');
+    if(fill) fill.style.width=pct+'%';
+    const pl=document.getElementById('gcash-amount-paid-lbl');
+    const bl=document.getElementById('gcash-amount-bal-lbl');
+    if(pl) pl.textContent='GCash paid: '+peso(amt);
+    if(bl) bl.textContent='Balance: '+peso(bal);
+  } else {
+    preview.style.display='none';
   }
 }
 function selBtype(t){
@@ -2409,12 +2640,12 @@ function saveBooking(section){
   const isFH=section==='fh';
   const checkout=!isFH?(document.getElementById('f-checkout')?.value||date):date;
   const extbed=!isFH?(parseInt(document.getElementById('f-extbed')?.value||0)||0):0;
+  const extpax=!isFH?(parseInt(document.getElementById('f-extpax')?.value||0)||0):0;
   const fhHours=isFH?(parseInt(document.getElementById('f-fhhours')?.value||FH_BASE_HRS)||FH_BASE_HRS):0;
   const contact=(document.getElementById('f-contact')?.value||'').trim();
   const gcashRef=(document.getElementById('f-gcashref')?.value||'').trim();
+  const gcashamount=parseFloat(document.getElementById('f-gcashamount')?.value||0)||0;
   const deposit=parseFloat(document.getElementById('f-deposit')?.value||0)||0;
-  const photoEl=document.getElementById('photo-preview-img');
-  const idPhoto=(photoEl&&photoEl.src&&photoEl.style.display!=='none'&&photoEl.src.startsWith('data:'))?photoEl.src:(editingId?bookings.find(b=>b.id===editingId)?.idPhoto||'':'');
   const total=calcTotal(section);
   if(!name){const fn=document.getElementById('f-name');fn.style.borderColor='#dc2626';fn.focus();return;}
   if(!date)return;
@@ -2424,7 +2655,7 @@ function saveBooking(section){
     return;
   }
   clearConflictError();
-  const data={name,contact,gcashRef,status,btype,venueId,date,checkout,pax,extbed,fhHours,note,total:total||0,deposit,idPhoto};
+  const data={name,contact,gcashRef,gcashamount,status,btype,venueId,date,checkout,pax,extbed,extpax,fhHours,note,total:total||0,deposit,idPhoto};
   if(editingId){
     const idx=bookings.findIndex(b=>b.id===editingId);
     if(idx>-1) bookings[idx]={...bookings[idx],...data};
