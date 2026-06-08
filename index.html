@@ -6,6 +6,22 @@
 <title>Garden Inn Scheduler</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyB_b1zEUCHZqc9Hf3KpEOzosA4YEFLF6Dw",
+    authDomain: "garden-inn.firebaseapp.com",
+    databaseURL: "https://garden-inn-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "garden-inn",
+    storageBucket: "garden-inn.firebasestorage.app",
+    messagingSenderId: "529975432358",
+    appId: "1:529975432358:web:37df00f7ef7f5d50f19067"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -699,8 +715,17 @@ const USERS = [
 
 let currentUser = null;
 let deleteLog = [];
-try{ deleteLog = JSON.parse(localStorage.getItem('rcs_dellog')||'[]'); }catch(e){}
-function saveDelLog(){ try{localStorage.setItem('rcs_dellog',JSON.stringify(deleteLog));}catch(e){} }
+let _fbReady = false;
+let _fbSaveTimer = null;
+let _fbDelTimer = null;
+
+function saveDelLog(){
+  if(!_fbReady) return;
+  clearTimeout(_fbDelTimer);
+  _fbDelTimer = setTimeout(()=>{
+    db.ref('rcs_dellog').set(deleteLog.slice(0,100)).catch(e=>console.warn('FB dellog save:',e));
+  }, 800);
+}
 
 /* --- LOGIN --- */
 let loginSelectedUser = null;
@@ -999,7 +1024,7 @@ const STATUS_L = {paid:'Fully paid',adv:'With advance',wlk:'Walk-in',gcash:'GCas
 const STATUS_P = {paid:'p-paid',adv:'p-adv',wlk:'p-wlk',gcash:'p-gcash'};
 
 let bookings = [];
-try{ bookings = JSON.parse(localStorage.getItem('rcs_v5')||'[]'); }catch(e){}
+// bookings loaded from Firebase on init (see bottom of script)
 let navs = {rooms:0,cot:0,fh:0};
 let views = {rooms:'week',cot:'week',fh:'week'};
 let fRoom='',fStatus='';
@@ -1016,10 +1041,16 @@ function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2
 function peso(n){return '₱'+Number(n||0).toLocaleString();}
 
 function save(){
-  try{localStorage.setItem('rcs_v5',JSON.stringify(bookings));}catch(e){}
+  // Update UI immediately
   document.getElementById('total-badge').textContent=bookings.length+' booking'+(bookings.length!==1?'s':'');
   renderTodayBar();
   renderTabCounts();
+  // Debounced Firebase write
+  if(!_fbReady) return;
+  clearTimeout(_fbSaveTimer);
+  _fbSaveTimer = setTimeout(()=>{
+    db.ref('rcs_v5').set(bookings).catch(e=>console.warn('FB save error:',e));
+  }, 600);
 }
 
 /* ===== NIGHTS CALCULATION ===== */
@@ -2775,6 +2806,9 @@ function importData(input){
       if(!confirm(`Import ${data.bookings.length} bookings from backup?\n\nThis will REPLACE all current data. Are you sure?`)) return;
       bookings=data.bookings;
       if(Array.isArray(data.deleteLog)) deleteLog=data.deleteLog;
+      // Save both to Firebase
+      db.ref('rcs_v5').set(bookings);
+      db.ref('rcs_dellog').set(deleteLog.slice(0,100));
       save(); saveDelLog();
       ['rooms','cot','fh'].forEach(s=>renderSection(s));
       renderOverview();
@@ -2791,6 +2825,7 @@ function clearAllData(){
   if(!user){ alert('❌ Incorrect PIN. Data not cleared.'); return; }
   if(!confirm(`${user.name} confirmed. Delete ALL ${bookings.length} bookings now?`)) return;
   bookings=[];
+  db.ref('rcs_v5').set([]);
   save();
   ['rooms','cot','fh'].forEach(s=>renderSection(s));
   renderList();
@@ -2814,14 +2849,54 @@ function getBkCardExtras(bk){
 }
 
 
-save();
-renderRoomRates();
-renderCottageRates();
-renderSection('rooms');
-renderSection('cot');
-renderSection('fh');
-initLogin();
-document.getElementById('day-popup-bg').addEventListener('click',e=>{if(e.target===document.getElementById('day-popup-bg'))closeDayPopup();});
+// Show loading overlay while Firebase loads
+(function(){
+  const ov = document.createElement('div');
+  ov.id = 'fb-loading';
+  ov.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:"DM Sans",sans-serif';
+  ov.innerHTML = '<div style="font-size:36px">🌿</div><div style="font-size:16px;font-weight:600;color:var(--text)">Garden Inn</div><div style="font-size:13px;color:var(--text2)">Loading data…</div>';
+  document.body.appendChild(ov);
+})();
+
+Promise.all([
+  db.ref('rcs_v5').once('value'),
+  db.ref('rcs_dellog').once('value')
+]).then(([snapBookings, snapDel])=>{
+  const fbBookings = snapBookings.val();
+  if(Array.isArray(fbBookings)) bookings = fbBookings;
+  const fbDel = snapDel.val();
+  if(Array.isArray(fbDel)) deleteLog = fbDel;
+  _fbReady = true;
+  // Remove loading overlay
+  const ov = document.getElementById('fb-loading');
+  if(ov) ov.remove();
+  // Boot the app
+  save();
+  renderRoomRates();
+  renderCottageRates();
+  renderSection('rooms');
+  renderSection('cot');
+  renderSection('fh');
+  initLogin();
+  document.getElementById('day-popup-bg').addEventListener('click',e=>{if(e.target===document.getElementById('day-popup-bg'))closeDayPopup();});
+  // Listen for real-time changes from other devices
+  db.ref('rcs_v5').on('value', snap=>{
+    const val = snap.val();
+    if(!Array.isArray(val)) return;
+    // Only update if data actually changed (avoid loop from own writes)
+    if(JSON.stringify(val)===JSON.stringify(bookings)) return;
+    bookings = val;
+    ['rooms','cot','fh'].forEach(s=>renderSection(s));
+    renderList&&renderList();
+    renderOverview&&renderOverview();
+    document.getElementById('total-badge').textContent=bookings.length+' booking'+(bookings.length!==1?'s':'');
+    renderTodayBar();
+    renderTabCounts();
+  });
+}).catch(err=>{
+  const ov = document.getElementById('fb-loading');
+  if(ov) ov.innerHTML = '<div style="font-size:36px">⚠️</div><div style="font-size:15px;font-weight:600;color:#dc2626">Could not connect to Firebase</div><div style="font-size:13px;color:var(--text2);text-align:center;max-width:280px">Check your internet connection or Firebase rules.<br><br>'+err.message+'</div><button onclick="location.reload()" style="margin-top:12px;padding:10px 24px;border-radius:10px;border:none;background:var(--text);color:#fff;font-size:14px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-weight:600">Retry</button>';
+});
 </script>
 </body>
 </html>
