@@ -2366,12 +2366,12 @@ function saveRoomTypeBooking(){
       const alreadyAssigned=roomsBooked.map(r=>r.venueId);
       const room=availRooms.find(r=>!alreadyAssigned.includes(r.id));
       if(!room) continue;
-      const roomTotal=rt.price*nights+(i===0&&!firstId?(extbed*250*nights+extpax*100*nights+(cotVenue?cotVenue.price*nights:0)):0);
       const perRoomTotal=rt.price*nights;
+      const firstRoomTotal=perRoomTotal+(extbed*250*nights)+(extpax*100*nights)+(cotVenue?cotVenue.price*nights:0);
       const newId=uid();
       if(!firstId){
         firstId=newId;
-        bookings.push({id:newId,name,contact,gcashRef,gcashamount,status,btype,venueId:room.id,date:checkin,checkout,pax,extbed,extpax,fhHours:0,note,total:total||0,deposit,idPhoto,multiRoomGroup:groupId});
+        bookings.push({id:newId,name,contact,gcashRef,gcashamount,status,btype,venueId:room.id,date:checkin,checkout,pax,extbed,extpax,fhHours:0,note,total:firstRoomTotal,deposit,idPhoto,multiRoomGroup:groupId});
       } else {
         bookings.push({id:newId,name,status,btype,venueId:room.id,date:checkin,checkout,pax,extbed:0,extpax:0,fhHours:0,note:'(multi-room with '+name+')',total:perRoomTotal,deposit:0,multiRoomGroup:groupId,linkedRoom:firstId});
       }
