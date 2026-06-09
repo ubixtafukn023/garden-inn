@@ -2306,7 +2306,7 @@ function calcRoomTypeTotal(){
   if(cotVenue) rows+=`<div class="pr-row"><span>🌿 ${cotVenue.name}${nights>1?' × '+nights+' nights':''}</span><span class="mono">${peso(cotTotal)}</span></div>`;
   const ps=document.getElementById('price-box');
   if(ps){
-    ps.innerHTML=rows+(rt?`<div class="pr-total"><span>Total</span><span class="mono">${peso(total)}</span></div>`:'');
+    ps.innerHTML=rows+(hasRooms?`<div class="pr-total"><span>Total</span><span class="mono">${peso(total)}</span></div>`:'');
     ps.dataset.total=total;
   }
   updateDepositPreview();
