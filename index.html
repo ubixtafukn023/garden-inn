@@ -118,6 +118,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   .cal-head .hdate{font-size:11px}
   .cal-head .hday{font-size:8px}
 }
+/* UNIFIED CALENDAR SECTION DIVIDER */
+.cal-section-divider{
+  grid-column:1/-1;
+  display:flex;align-items:center;gap:8px;
+  padding:5px 8px;
+  background:var(--surface3);
+  border-right:1px solid var(--border2);
+  border-bottom:1px solid var(--border2);
+}
+.cal-section-divider span{font-size:10px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.08em}
+.cal-section-divider .sec-line{flex:1;height:1px;background:var(--border2)}
 /* RATE CARDS */
 .rate-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:1.5rem}
 .rcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.875rem;text-align:center}
@@ -489,10 +500,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 </div>
 
 <div class="main-tabs">
-  <button class="mtab active" id="mtab-rooms" onclick="switchMain('rooms')">🛏️ Rooms <span class="tab-count" id="tc-rooms"></span></button>
-  <button class="mtab" id="mtab-cottages" onclick="switchMain('cottages')">🌿 Cottages <span class="tab-count" id="tc-cottages"></span></button>
-  <button class="mtab" id="mtab-fh" onclick="switchMain('fh')">🎪 Hall <span class="tab-count" id="tc-fh"></span></button>
-  <button class="mtab" id="mtab-all" onclick="switchMain('all')">📋 All <span class="tab-count" id="tc-all"></span></button>
+  <button class="mtab active" id="mtab-calendar" onclick="switchMain('calendar')">🗓️ Calendar <span class="tab-count" id="tc-all"></span></button>
+  <button class="mtab" id="mtab-all" onclick="switchMain('all')">📋 All Bookings</button>
   <button class="mtab" id="mtab-overview" onclick="switchMain('overview')">📊 Overview</button>
 </div>
 
@@ -503,67 +512,31 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 </div>
 
 
-<!-- ROOMS -->
-<div id="mp-rooms" class="mpanel active">
-  <div class="rate-grid" id="room-rates"></div>
-  <div class="legend">
+<!-- UNIFIED CALENDAR -->
+<div id="mp-calendar" class="mpanel active">
+  <!-- Legend -->
+  <div class="legend" style="margin-bottom:.75rem">
     <div class="li"><div class="ld" style="background:#15803d;border:1px solid #86efac"></div>Fully paid</div>
     <div class="li"><div class="ld" style="background:#b45309;border:1px solid #fcd34d"></div>With advance</div>
-    <div class="li"><div class="ld" style="background:#1d4ed8;border:1px solid #93c5fd"></div>Walk-in / No advance</div>
+    <div class="li"><div class="ld" style="background:#1d4ed8;border:1px solid #93c5fd"></div>Walk-in (Room)</div>
+    <div class="li"><div class="ld" style="background:#0e7490;border:1px solid #67e8f9"></div>Walk-in (Cottage)</div>
+    <div class="li"><div class="ld" style="background:#be185d;border:1px solid #f9a8d4"></div>Walk-in (Hall)</div>
   </div>
-  <div class="cal-nav-top">
-    <span class="nav-title" id="rooms-nav-title"></span>
-    <div class="view-toggle">
-      <button class="vtbtn active" id="vt-rooms-week" onclick="setView('rooms','week')">Week</button>
-      <button class="vtbtn" id="vt-rooms-month" onclick="setView('rooms','month')">Month</button>
+  <!-- Quick-add buttons -->
+  <div style="display:flex;gap:6px;margin-bottom:.875rem;flex-wrap:wrap">
+    <button class="btn-p" onclick="openAdd('rooms')" style="padding:7px 13px;font-size:12px">+ Room</button>
+    <button class="btn-p" onclick="openAdd('cottages')" style="padding:7px 13px;font-size:12px;background:var(--cot)">+ Cottage</button>
+    <button class="btn-p fhbtn" onclick="openAdd('fh')" style="padding:7px 13px;font-size:12px">+ Function Hall</button>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
+      <span class="nav-title" id="cal-nav-title" style="font-size:13px"></span>
+      <div class="view-toggle">
+        <button class="vtbtn active" id="vt-cal-week" onclick="setCalView('week')">Week</button>
+        <button class="vtbtn" id="vt-cal-month" onclick="setCalView('month')">Month</button>
+      </div>
     </div>
   </div>
-  <div class="scroll-nav" id="scroll-nav-rooms"></div>
-  <div class="cal-wrap" id="rooms-cal"></div>
-</div>
-
-<!-- COTTAGES -->
-<div id="mp-cottages" class="mpanel">
-  <div class="rate-grid" id="cot-rates"></div>
-  <div class="legend">
-    <div class="li"><div class="ld" style="background:#15803d;border:1px solid #86efac"></div>Fully paid</div>
-    <div class="li"><div class="ld" style="background:#b45309;border:1px solid #fcd34d"></div>With advance</div>
-    <div class="li"><div class="ld" style="background:#0e7490;border:1px solid #67e8f9"></div>Walk-in / Cottage</div>
-  </div>
-  <div class="cal-nav-top">
-    <span class="nav-title" id="cot-nav-title"></span>
-    <div class="view-toggle">
-      <button class="vtbtn active" id="vt-cot-week" onclick="setView('cot','week')">Week</button>
-      <button class="vtbtn" id="vt-cot-month" onclick="setView('cot','month')">Month</button>
-    </div>
-  </div>
-  <div class="scroll-nav" id="scroll-nav-cot"></div>
-  <div class="cal-wrap" id="cot-cal"></div>
-</div>
-
-<!-- FUNCTION HALL -->
-<div id="mp-fh" class="mpanel">
-  <div class="fh-info">
-    <div class="fh-icon">🎪</div>
-    <div class="fh-details">
-      <h3>Garden Inn — Function Hall</h3>
-      <p>Function Hall: ₱4,000 for the first 4 hours &nbsp;·&nbsp; ₱1,000 per additional hour</p>
-    </div>
-  </div>
-  <div class="legend">
-    <div class="li"><div class="ld" style="background:#15803d;border:1px solid #86efac"></div>Fully paid</div>
-    <div class="li"><div class="ld" style="background:#b45309;border:1px solid #fcd34d"></div>With advance</div>
-    <div class="li"><div class="ld" style="background:#be185d;border:1px solid #f9a8d4"></div>Walk-in / Function Hall</div>
-  </div>
-  <div class="cal-nav-top">
-    <span class="nav-title" id="fh-nav-title"></span>
-    <div class="view-toggle">
-      <button class="vtbtn active" id="vt-fh-week" onclick="setView('fh','week')">Week</button>
-      <button class="vtbtn" id="vt-fh-month" onclick="setView('fh','month')">Month</button>
-    </div>
-  </div>
-  <div class="scroll-nav" id="scroll-nav-fh"></div>
-  <div class="cal-wrap" id="fh-cal"></div>
+  <div class="scroll-nav" id="scroll-nav-cal"></div>
+  <div class="cal-wrap" id="unified-cal"></div>
 </div>
 
 <!-- ALL BOOKINGS -->
@@ -935,7 +908,7 @@ function delExecute(){
     editingId=null;
     save();
     closeDelScreen();
-    ['rooms','cot','fh'].forEach(s=>renderSection(s));
+    renderUnifiedCalendar();
     renderList();
     renderOverview();
     showToast(`🗑️ Deleted ${deleted.length} booking${deleted.length!==1?'s':''} for ${delPendingDayLabel}`,'#dc2626');
@@ -960,7 +933,7 @@ function delExecute(){
   editingId = null;
   save();
   closeDelScreen();
-  ['rooms','cot','fh'].forEach(s=>renderSection(s));
+  renderUnifiedCalendar();
   renderList();
   renderOverview();
   showToast('🗑️ Deleted: '+deletedName, '#dc2626');
@@ -991,14 +964,7 @@ function renderTodayBar(){
 
 /* ===== TAB COUNTS ===== */
 function renderTabCounts(){
-  const td=today();
-  const roomBks=bookings.filter(b=>{const v=ALL_VENUES.find(x=>x.id===b.venueId);return v&&v.kind==='room';});
-  const cotBks=bookings.filter(b=>{const v=ALL_VENUES.find(x=>x.id===b.venueId);return v&&v.kind==='cottage';});
-  const fhBks=bookings.filter(b=>{const v=ALL_VENUES.find(x=>x.id===b.venueId);return v&&v.kind==='fh';});
   const set=(id,n)=>{const el=document.getElementById(id);if(el)el.textContent=n>0?n:'';};
-  set('tc-rooms',roomBks.length);
-  set('tc-cottages',cotBks.length);
-  set('tc-fh',fhBks.length);
   set('tc-all',bookings.length);
 }
 
@@ -1041,8 +1007,8 @@ const STATUS_P = {paid:'p-paid',adv:'p-adv',wlk:'p-wlk',gcash:'p-gcash'};
 
 let bookings = [];
 // bookings loaded from Firebase on init (see bottom of script)
-let navs = {rooms:0,cot:0,fh:0};
-let views = {rooms:'week',cot:'week',fh:'week'};
+let navs = {rooms:0,cot:0,fh:0,cal:0};
+let views = {rooms:'week',cot:'week',fh:'week',cal:'week'};
 let fRoom='',fStatus='';
 let editingId=null;
 
@@ -1606,15 +1572,274 @@ function renderOverview(){
 
 /* ===== MAIN TAB SWITCH ===== */
 function switchMain(t){
-  document.querySelectorAll('.mtab').forEach((el,i)=>{el.classList.toggle('active',['rooms','cottages','fh','all','overview'][i]===t);});
+  document.querySelectorAll('.mtab').forEach(el=>el.classList.remove('active'));
+  const activeTab=document.getElementById('mtab-'+t);
+  if(activeTab) activeTab.classList.add('active');
   document.querySelectorAll('.mpanel').forEach(el=>el.classList.remove('active'));
   document.getElementById('mp-'+t).classList.add('active');
+  if(t==='calendar') renderUnifiedCalendar();
   if(t==='all'){
     const rf=document.getElementById('room-filter');
     if(rf.options.length<=1) ALL_VENUES.forEach(v=>{const o=document.createElement('option');o.value=v.id;o.textContent=v.icon+' '+v.name;rf.appendChild(o);});
     renderList();
   }
   if(t==='overview'){populateMonthSelector();renderOverview();}
+}
+
+/* ===== UNIFIED CALENDAR CONTROLS ===== */
+function setCalView(v){
+  views.cal=v; navs.cal=0;
+  document.getElementById('vt-cal-week').classList.toggle('active',v==='week');
+  document.getElementById('vt-cal-month').classList.toggle('active',v==='month');
+  renderUnifiedCalendar();
+}
+
+function renderUnifiedCalendar(){
+  if(views.cal==='week') renderUnifiedWeek();
+  else renderUnifiedMonth();
+}
+
+/* ===== UNIFIED WEEK VIEW ===== */
+function renderUnifiedWeek(){
+  const days=getWeekDates(navs.cal);
+  const td=today();
+  document.getElementById('cal-nav-title').textContent=fmtDisp(days[0])+' – '+fmtDisp(days[6])+', '+days[0].getFullYear();
+  renderScrollNavCal();
+
+  const area=document.getElementById('unified-cal');
+  area.innerHTML='';
+  const grid=document.createElement('div');
+  grid.className='cal-grid week-grid';
+
+  // Header row
+  const eh=document.createElement('div');eh.className='cal-head';grid.appendChild(eh);
+  const DN=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  days.forEach((d,i)=>{
+    const h=document.createElement('div');
+    h.className='cal-head'+(fmt(d)===td?' th':'');
+    h.innerHTML=`<span class="hday">${DN[i]}</span><span class="hdate">${d.getDate()}</span>`;
+    grid.appendChild(h);
+  });
+
+  const SECTIONS=[
+    {label:'🛏️ Rooms',    venues:ROOMS,    kind:'room',    sec:'rooms'},
+    {label:'🌿 Cottages', venues:COTTAGES,  kind:'cottage', sec:'cot'},
+    {label:'🎪 Hall',     venues:FH,        kind:'fh',      sec:'fh'},
+  ];
+
+  SECTIONS.forEach(({label,venues,kind,sec})=>{
+    // Section divider spanning all columns
+    const div=document.createElement('div');
+    div.className='cal-section-divider';
+    div.innerHTML=`<span>${label}</span><div class="sec-line"></div>`;
+    grid.appendChild(div);
+
+    venues.forEach(venue=>{
+      const lbl=document.createElement('div');
+      lbl.className='cal-cell rl';
+      const rateNote=venue.kind==='fh'
+        ?`${peso(venue.price)}/4hrs<br>+${peso(venue.ext)}/hr ext`
+        :venue.price?peso(venue.price):'';
+      lbl.innerHTML=`<div>
+        <div class="rn">${venue.icon} <span class="rn-full">${venue.name}</span></div>
+        <div class="rt">${venue.type||''}</div>
+        <div class="rc">${venue.cap?'max '+venue.cap+' pax':''}</div>
+        <div class="rc" style="color:var(--adv);font-weight:600;margin-top:2px">${rateNote}</div>
+      </div>`;
+      grid.appendChild(lbl);
+
+      days.forEach(d=>{
+        const ds=fmt(d);
+        const cell=document.createElement('div');
+        cell.className='cal-cell'+(ds===td?' tc':'');
+        const bks=bookings.filter(b=>b.venueId===venue.id&&dateInRange(ds,b.date,b.checkout||b.date));
+        const groups=groupBookingsByGuest(bks,ds);
+        const visibleGroups=groups.slice(0,2);
+        const hiddenGroups=groups.slice(2);
+
+        visibleGroups.forEach(({rep,group})=>{
+          const pill=document.createElement('div');
+          pill.className='bpill '+pillCls(rep.status,venue.kind);
+          const dot=document.createElement('span');dot.className='pdot';
+          dot.style.background=dotColor(rep.status,venue.kind);
+          pill.appendChild(dot);
+          if(group.length>1){
+            const isCheckin=rep.date===ds;
+            pill.appendChild(document.createTextNode((!isCheckin?'↩ ':'')+rep.name));
+            const badge=document.createElement('span');
+            badge.style.cssText='background:rgba(0,0,0,.15);border-radius:20px;padding:0 5px;font-size:9px;font-weight:700;margin-left:3px';
+            badge.textContent='×'+group.length;
+            pill.appendChild(badge);
+            pill.onclick=(e)=>{e.stopPropagation();openDayPopup(sec,ds,group);};
+          } else {
+            const amtLabel=pillAmountLabel(rep);
+            const contMark=rep.date!==ds?'↩ ':'';
+            pill.appendChild(document.createTextNode(contMark+rep.name+(amtLabel?' · '+amtLabel:'')));
+            pill.onclick=(e)=>{e.stopPropagation();openEdit(rep.id);};
+          }
+          pill.title=guestGroupTooltip(rep,group);
+          cell.appendChild(pill);
+        });
+
+        if(hiddenGroups.length>0){
+          const wrap=document.createElement('div');wrap.className='overflow-wrap';
+          const more=document.createElement('div');more.className='more-pill';
+          more.textContent='+'+hiddenGroups.length+' more';
+          const drop=document.createElement('div');drop.className='overflow-dropdown';
+          hiddenGroups.forEach(({rep,group})=>{
+            const pill=document.createElement('div');
+            pill.className='bpill '+pillCls(rep.status,venue.kind);
+            const dot=document.createElement('span');dot.className='pdot';
+            dot.style.background=dotColor(rep.status,venue.kind);
+            pill.appendChild(dot);
+            const contMark=rep.date!==ds?'↩ ':'';
+            if(group.length>1){
+              pill.appendChild(document.createTextNode(contMark+rep.name));
+              const badge=document.createElement('span');
+              badge.style.cssText='background:rgba(0,0,0,.15);border-radius:20px;padding:0 5px;font-size:9px;font-weight:700;margin-left:3px';
+              badge.textContent='×'+group.length;
+              pill.appendChild(badge);
+              pill.onclick=(e)=>{e.stopPropagation();drop.classList.remove('open');openDayPopup(sec,ds,group);};
+            } else {
+              const amtLabel=pillAmountLabel(rep);
+              pill.appendChild(document.createTextNode(contMark+rep.name+(amtLabel?' · '+amtLabel:'')));
+              pill.onclick=(e)=>{e.stopPropagation();drop.classList.remove('open');openEdit(rep.id);};
+            }
+            drop.appendChild(pill);
+          });
+          more.onclick=(e)=>{e.stopPropagation();drop.classList.toggle('open');};
+          document.addEventListener('click',()=>drop.classList.remove('open'));
+          wrap.appendChild(more);wrap.appendChild(drop);
+          cell.appendChild(wrap);
+        }
+
+        const ab=document.createElement('div');ab.className='add-btn';ab.textContent='+';
+        ab.onclick=(e)=>{e.stopPropagation();openAdd(sec,venue.id,ds);};
+        cell.appendChild(ab);
+
+        // Cell click → day popup for this venue's kind on this date
+        const allDayBks=bookings.filter(b=>{
+          const vv=ALL_VENUES.find(x=>x.id===b.venueId);
+          return vv&&vv.kind===kind&&dateInRange(ds,b.date,b.checkout||b.date);
+        });
+        cell.onclick=()=>openDayPopup(sec,ds,allDayBks);
+        grid.appendChild(cell);
+      });
+    });
+  });
+  area.appendChild(grid);
+}
+
+/* ===== UNIFIED MONTH VIEW ===== */
+function renderUnifiedMonth(){
+  const {days,label}=getMonthData(navs.cal);
+  const td=today();
+  document.getElementById('cal-nav-title').textContent=label;
+  renderScrollNavCal();
+
+  const area=document.getElementById('unified-cal');
+  area.innerHTML='';
+
+  const SECTIONS=[
+    {label:'🛏️ Rooms',    kind:'room',    sec:'rooms'},
+    {label:'🌿 Cottages', kind:'cottage', sec:'cot'},
+    {label:'🎪 Hall',     kind:'fh',      sec:'fh'},
+  ];
+
+  SECTIONS.forEach(({label,kind,sec})=>{
+    // Section title
+    const secTitle=document.createElement('div');
+    secTitle.style.cssText='font-size:11px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;padding:10px 2px 4px;display:flex;align-items:center;gap:8px';
+    secTitle.innerHTML=`<span>${label}</span><div style="flex:1;height:1px;background:var(--border2)"></div>`;
+    area.appendChild(secTitle);
+
+    const grid=document.createElement('div');
+    grid.className='cal-grid month-grid';
+    grid.style.marginBottom='1rem';
+
+    ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach(n=>{
+      const h=document.createElement('div');h.className='cal-head';
+      h.innerHTML=`<span class="hday" style="font-size:10px;letter-spacing:0">${n}</span>`;
+      grid.appendChild(h);
+    });
+
+    days.forEach(({date,thisMonth})=>{
+      const ds=fmt(date);
+      const cell=document.createElement('div');
+      cell.className='mc'+(ds===td?' tm':'')+((!thisMonth)?' om':'');
+      const dn=document.createElement('div');dn.className='mdn';dn.textContent=date.getDate();cell.appendChild(dn);
+      const dayBks=bookings.filter(b=>{
+        const v=ALL_VENUES.find(x=>x.id===b.venueId);
+        return v&&v.kind===kind&&dateInRange(ds,b.date,b.checkout||b.date);
+      });
+      const guestGroups=groupBookingsByGuest(dayBks,ds);
+      guestGroups.slice(0,3).forEach(({rep,group})=>{
+        const v=ALL_VENUES.find(x=>x.id===rep.venueId);
+        const pill=document.createElement('div');
+        pill.className='mpill '+pillCls(rep.status,v?v.kind:'room');
+        const contMark=rep.date!==ds?'↩ ':'';
+        if(group.length>1){
+          const totalAmt=group.reduce((s,b)=>s+(b.total||0),0);
+          pill.textContent=contMark+rep.name+' ×'+group.length+(totalAmt?' · '+peso(totalAmt):'');
+          pill.onclick=(e)=>{e.stopPropagation();openDayPopup(sec,ds,group);};
+        } else {
+          const rt=v?ROOM_TYPES.find(x=>x.key===v.typeKey):null;
+          const vLabel=rt?rt.label:(v?v.name:'');
+          const amtLabel=pillAmountLabel(rep);
+          pill.textContent=contMark+(vLabel?vLabel+': ':'')+rep.name+(amtLabel?' · '+amtLabel:'');
+          pill.onclick=(e)=>{e.stopPropagation();openEdit(rep.id);};
+        }
+        cell.appendChild(pill);
+      });
+      if(guestGroups.length>3){
+        const m=document.createElement('div');m.className='more-lnk';
+        m.textContent='+'+(guestGroups.length-3)+' more';
+        m.onclick=(e)=>{e.stopPropagation();openDayPopup(sec,ds,dayBks);};
+        cell.appendChild(m);
+      }
+      cell.onclick=()=>openDayPopup(sec,ds,dayBks);
+      grid.appendChild(cell);
+    });
+    area.appendChild(grid);
+  });
+}
+
+/* ===== SCROLL NAV FOR UNIFIED CALENDAR ===== */
+function renderScrollNavCal(){
+  const el=document.getElementById('scroll-nav-cal');
+  if(!el) return;
+  const isWeek=views.cal==='week';
+  const td=today();
+  el.innerHTML='';
+  if(isWeek){
+    [-4,-3,-2,-1,0,1,2,3,4].forEach(off=>{
+      const days=getWeekDates(off);
+      const chip=document.createElement('div');
+      chip.className='snav-week'+(off===navs.cal?' active':'');
+      days.forEach((d,i)=>{
+        const ds=fmt(d);
+        const dn=['M','T','W','T','F','S','S'][i];
+        const day=document.createElement('div');
+        day.className='snav-day'+(ds===td?' snd-today':'');
+        day.innerHTML=`<span class="snav-day-name">${dn}</span><span class="snav-day-num">${d.getDate()}</span>`;
+        chip.appendChild(day);
+      });
+      chip.onclick=()=>{navs.cal=off;renderUnifiedCalendar();};
+      el.appendChild(chip);
+    });
+    setTimeout(()=>{const a=el.querySelector('.snav-week.active');if(a)a.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});},50);
+  } else {
+    const now=new Date();
+    [-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6].forEach(off=>{
+      const base=new Date(now.getFullYear(),now.getMonth()+off,1);
+      const chip=document.createElement('div');
+      chip.className='snav-month-chip'+(off===navs.cal?' active':'');
+      chip.innerHTML=`<span class="sm-label">${base.toLocaleDateString('en-PH',{month:'short'})}</span><span class="sm-year">${base.getFullYear()}</span>`;
+      chip.onclick=()=>{navs.cal=off;renderUnifiedCalendar();};
+      el.appendChild(chip);
+    });
+    setTimeout(()=>{const a=el.querySelector('.snav-month-chip.active');if(a)a.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});},50);
+  }
 }
 
 /* ===== PRICE CALC ===== */
@@ -2382,7 +2607,7 @@ function saveRoomTypeBooking(){
     bookings.push({id:uid(),name,status,btype,venueId:cotId,date:checkin,checkout,pax,extpax:0,extbed:0,fhHours:0,note:'(with '+name.split(' ')[0]+' — linked from room)',total:cotVenue.price*nights,linkedRoom:firstId});
   }
   save(); closeModal();
-  ['rooms','cot','fh'].forEach(s=>renderSection(s));
+  renderUnifiedCalendar();
   renderList();
   const roomSummary=ROOM_TYPES.filter(rt=>(qtyMap[rt.key]||0)>0).map(rt=>`${qtyMap[rt.key]}× ${rt.label}`).join(', ');
   showToast(`✅ Booked for ${name}: ${roomSummary}`,'#15803d');
@@ -2536,7 +2761,7 @@ function saveFullVenueBooking(){
     });
   });
   save(); closeModal();
-  ['rooms','cot','fh'].forEach(s=>renderSection(s));
+  renderUnifiedCalendar();
   renderList();
   alert(`✅ Full Venue booked for ${name}!\n${ROOMS.length} rooms × ${nights} night${nights>1?'s':''} = ${peso(total)}`);
 }
@@ -2784,9 +3009,7 @@ function saveBooking(section){
     }
   }
   save(); closeModal();
-  renderSection('rooms');
-  renderSection('cot');
-  renderSection('fh');
+  renderUnifiedCalendar();
   renderList();
 }
 
@@ -2991,7 +3214,7 @@ function toggleCheckIn(id, type){
     bk.checkedOutAt=bk.checkedOut?now:null;
   }
   save();
-  ['rooms','cot','fh'].forEach(s=>renderSection(s));
+  renderUnifiedCalendar();
   openEdit(id); // refresh modal
 }
 function fmtTs(iso){
@@ -3151,7 +3374,7 @@ function importData(input){
       db.ref('rcs_v5').set(bookings);
       db.ref('rcs_dellog').set(deleteLog.slice(0,100));
       save(); saveDelLog();
-      ['rooms','cot','fh'].forEach(s=>renderSection(s));
+      renderUnifiedCalendar();
       renderOverview();
       alert('✅ Import successful! '+bookings.length+' bookings restored.');
     }catch(err){alert('❌ Import failed: Invalid backup file.\n'+err.message);}
@@ -3168,7 +3391,7 @@ function clearAllData(){
   bookings=[];
   db.ref('rcs_v5').set([]);
   save();
-  ['rooms','cot','fh'].forEach(s=>renderSection(s));
+  renderUnifiedCalendar();
   renderList();
   renderOverview();
   showToast('🗑️ All data cleared by '+user.name,'#b45309');
@@ -3213,12 +3436,8 @@ Promise.all([
   if(ov) ov.remove();
   // Boot the app
   save();
-  renderRoomRates();
-  renderCottageRates();
-  renderSection('rooms');
-  renderSection('cot');
-  renderSection('fh');
   initLogin();
+  renderUnifiedCalendar();
   document.getElementById('day-popup-bg').addEventListener('click',e=>{if(e.target===document.getElementById('day-popup-bg'))closeDayPopup();});
   // Listen for real-time changes from other devices
   db.ref('rcs_v5').on('value', snap=>{
@@ -3227,7 +3446,7 @@ Promise.all([
     // Only update if data actually changed (avoid loop from own writes)
     if(JSON.stringify(val)===JSON.stringify(bookings)) return;
     bookings = val;
-    ['rooms','cot','fh'].forEach(s=>renderSection(s));
+    renderUnifiedCalendar();
     renderList&&renderList();
     renderOverview&&renderOverview();
     document.getElementById('total-badge').textContent=bookings.length+' booking'+(bookings.length!==1?'s':'');
