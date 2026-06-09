@@ -546,8 +546,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   <div class="fh-info">
     <div class="fh-icon">🎪</div>
     <div class="fh-details">
-      <h3>Garden Inn — Function Hall · Rooms · Cottages</h3>
-      <p>Function Hall: ₱4,000 for the first 4 hours &nbsp;·&nbsp; ₱1,000 per additional hour &nbsp;·&nbsp; You can also book Rooms or Cottages from this tab</p>
+      <h3>Garden Inn — Function Hall</h3>
+      <p>Function Hall: ₱4,000 for the first 4 hours &nbsp;·&nbsp; ₱1,000 per additional hour</p>
     </div>
   </div>
   <div class="legend">
@@ -1230,14 +1230,15 @@ function renderSection(sec){
 
 function venuesFor(sec){
   if(sec==='rooms') return ROOMS;
-  if(sec==='cottages') return COTTAGES;
-  // FH tab: primary venue is FH only (calendar rows), but modal dropdown includes all
+  if(sec==='cottages'||sec==='cot') return COTTAGES;
+  // FH tab: primary venue is FH only
   return FH;
 }
 function venuesForModal(sec){
   if(sec==='rooms') return ROOMS;
-  if(sec==='cottages') return COTTAGES;
-  return ALL_VENUES; // FH modal shows all venue types as dropdown
+  if(sec==='cottages'||sec==='cot') return COTTAGES;
+  if(sec==='fh') return FH;
+  return ALL_VENUES;
 }
 function calId(sec){return sec==='rooms'?'rooms-cal':sec==='cot'?'cot-cal':'fh-cal';}
 function navId(sec){return `${sec}-nav-title`;}
@@ -1880,7 +1881,7 @@ function openAdd(section,venueId='',date=''){
 
   let venueList=venuesForModal(section);
   const available=getAvailableVenues(venueList, selDate, selCheckout);
-  document.getElementById('modal-title').textContent=isFH?'New Event / Room / Cottage Booking':section==='cottages'?'New Cottage Booking':'New Room Booking';
+  document.getElementById('modal-title').textContent=isFH?'New Function Hall Booking':section==='cottages'||section==='cot'?'New Cottage Booking':'New Room Booking';
 
   let addonsBlock='';
   if(isFH){
@@ -1961,7 +1962,7 @@ function openAdd(section,venueId='',date=''){
     </div>
     <div class="frow">
       <div class="fg">
-        <label>${isFH?'Venue / Room / Cottage':section==='cottages'?'Cottage':'Room'}</label>
+        <label>${isFH?'Function Hall':section==='cottages'||section==='cot'?'Cottage':'Room'}</label>
         <select id="f-venue" onchange="onVenueChange('${section}');refreshVenueDropdown('${section}')">
           ${available.length===0?`<option value="">⚠️ All venues booked for this date</option>`:
             available.map(v=>`<option value="${v.id}"${v.id===venueId?'selected':''}>${v.icon} ${v.name} — ${peso(v.price)}</option>`).join('')}
@@ -2284,6 +2285,10 @@ function saveRoomTypeBooking(){
     return;
   }
   const total=calcRoomTypeTotal();
+  const idPhoto=(()=>{const img=document.getElementById('photo-preview-img');return img&&img.src&&img.style.display!=='none'?img.src:null;})();
+  const cotId=document.getElementById('f-cottage')?.value||'';
+  const cotVenue=cotId?ALL_VENUES.find(v=>v.id===cotId):null;
+  const nights=calcNights(checkin,checkout);
   const newId=uid();
   bookings.push({id:newId,name,contact,gcashRef,gcashamount,status,btype,venueId:room.id,date:checkin,checkout,pax,extbed,extpax,fhHours:0,note,total:total||0,deposit,idPhoto});
   if(cotVenue){
@@ -2662,6 +2667,7 @@ function saveBooking(section){
   const gcashRef=(document.getElementById('f-gcashref')?.value||'').trim();
   const gcashamount=parseFloat(document.getElementById('f-gcashamount')?.value||0)||0;
   const deposit=parseFloat(document.getElementById('f-deposit')?.value||0)||0;
+  const idPhoto=(()=>{const img=document.getElementById('photo-preview-img');return img&&img.src&&img.style.display!=='none'?img.src:null;})();
   const total=calcTotal(section);
   if(!name){const fn=document.getElementById('f-name');fn.style.borderColor='#dc2626';fn.focus();return;}
   if(!date)return;
