@@ -1738,11 +1738,25 @@ function openDayPopup(sec, ds, dayBks){
         const venueLines=group.map(b=>{
           const vv=ALL_VENUES.find(x=>x.id===b.venueId);
           const nights=calcNights(b.date,b.checkout||b.date);
+          const rt2=vv?ROOM_TYPES.find(x=>x.key===vv.typeKey):null;
+          const basePrice=vv?vv.price:0;
+          let subLines='';
+          if(basePrice&&nights>=1) subLines+=`<span style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace">${peso(basePrice)}×${nights}n</span>`;
+          if(b.extbed>0) subLines+=`<span style="font-size:10px;color:var(--text3);margin-left:4px">+bed×${b.extbed}</span>`;
+          if(b.extpax>0) subLines+=`<span style="font-size:10px;color:var(--text3);margin-left:4px">+pax×${b.extpax}</span>`;
           return `<div onclick="event.stopPropagation();closeDayPopup();openEdit('${b.id}')" style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border-radius:6px;cursor:pointer;background:var(--surface);margin-bottom:3px;gap:6px">
-            <span style="font-size:12px;color:var(--text2)">${vv?vv.icon+' '+vv.name:'?'}${nights>1?' · '+nights+'n':''}</span>
-            <span style="font-size:12px;font-weight:600;font-family:'DM Mono',monospace;color:var(--text)">${peso(b.total||0)}</span>
+            <div>
+              <div style="font-size:12px;color:var(--text2)">${vv?vv.icon+' '+(rt2?rt2.label:vv.name):'?'}${nights>1?' · '+nights+'n':''}</div>
+              ${subLines?`<div style="margin-top:1px">${subLines}</div>`:''}
+            </div>
+            <span style="font-size:12px;font-weight:600;font-family:'DM Mono',monospace;color:var(--text);flex-shrink:0">${peso(b.total||0)}</span>
           </div>`;
         }).join('');
+        // Payment summary
+        const dep=rep.deposit||0;
+        const bal=Math.max(0,totalAmt-dep);
+        let payRow='';
+        if(rep.status==='adv'&&dep>0) payRow=`<div style="display:flex;justify-content:space-between;margin-top:4px;padding-top:4px;border-top:1px dashed var(--border2)"><span style="font-size:11px;color:var(--adv)">Advance paid</span><span style="font-size:11px;font-weight:700;color:var(--adv);font-family:'DM Mono',monospace">${peso(dep)}</span></div><div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#dc2626">Balance due</span><span style="font-size:12px;font-weight:700;color:#dc2626;font-family:'DM Mono',monospace;background:#fee2e2;border-radius:5px;padding:0 5px">${peso(bal)}</span></div>`;
         const item=document.createElement('div');
         item.className='dp-item';
         item.style.flexDirection='column';
@@ -1759,28 +1773,47 @@ function openDayPopup(sec, ds, dayBks){
               <div style="margin-top:4px;font-size:13px;font-weight:700;color:var(--text);font-family:'DM Mono',monospace;text-align:right">${peso(totalAmt)}</div>
             </div>
           </div>
-          <div style="width:100%;padding-left:18px">${venueLines}</div>`;
+          <div style="width:100%;padding-left:18px">
+            ${venueLines}
+            ${payRow}
+          </div>`;
         list.appendChild(item);
       } else {
         // Single booking — original style
         const vLabel=rt?(v.icon+' '+rt.label):(v?v.icon+' '+v.name:'Unknown');
         const item=document.createElement('div');item.className='dp-item';
         const nights=calcNights(rep.date, rep.checkout||rep.date);
+        // Build breakdown lines
+        let breakdownHtml='';
+        if(rep.total){
+          const rt2=v?ROOM_TYPES.find(x=>x.key===v.typeKey):null;
+          const basePrice=v?v.price:0;
+          const blines=[];
+          if(basePrice&&nights>=1){
+            blines.push(`<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-top:2px"><span>${rt2?rt2.label:v.name} × ${nights} night${nights>1?'s':''}</span><span style="font-family:'DM Mono',monospace">${peso(basePrice*nights)}</span></div>`);
+          }
+          if(rep.extbed>0) blines.push(`<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2)"><span>Extra bed ×${rep.extbed}</span><span style="font-family:'DM Mono',monospace">${peso(rep.extbed*250*nights)}</span></div>`);
+          if(rep.extpax>0) blines.push(`<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2)"><span>Extra pax ×${rep.extpax}</span><span style="font-family:'DM Mono',monospace">${peso(rep.extpax*100*nights)}</span></div>`);
+          if(rep.fhHours>0){const ext=Math.max(0,rep.fhHours-FH_BASE_HRS);blines.push(`<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2)"><span>Base 4 hrs</span><span style="font-family:'DM Mono',monospace">${peso(FH_BASE)}</span></div>`);if(ext>0)blines.push(`<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2)"><span>+${ext} ext hr${ext>1?'s':''}</span><span style="font-family:'DM Mono',monospace">${peso(ext*FH_EXT)}</span></div>`);}
+          if(blines.length>0){
+            breakdownHtml=`<div style="margin-top:4px;padding:5px 7px;background:rgba(0,0,0,.04);border-radius:6px;border:1px solid var(--border)">${blines.join('')}<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--text);border-top:1px solid var(--border);margin-top:3px;padding-top:3px"><span>Total</span><span style="font-family:'DM Mono',monospace">${peso(rep.total)}</span></div></div>`;
+          }
+        }
         let paymentHtml='';
         if(rep.status==='adv'){
           const dep=rep.deposit||0;
           const bal=Math.max(0,(rep.total||0)-dep);
           paymentHtml=`<div style="margin-top:5px;display:flex;flex-direction:column;align-items:flex-end;gap:2px">
-            <div style="font-size:11px;color:var(--text2)">Total: <span style="font-weight:600;font-family:'DM Mono',monospace;color:var(--text)">${peso(rep.total||0)}</span></div>
+            <div style="font-size:12px;font-weight:700;color:var(--text);font-family:'DM Mono',monospace">${peso(rep.total||0)}</div>
             <div style="font-size:11px;color:var(--adv)">Paid: <span style="font-weight:700;font-family:'DM Mono',monospace">${peso(dep)}</span></div>
-            <div style="font-size:12px;font-weight:700;color:#dc2626;font-family:'DM Mono',monospace;background:#fee2e2;border-radius:6px;padding:1px 7px">Bal: ${peso(Math.max(0,(rep.total||0)-dep))}</div>
+            <div style="font-size:12px;font-weight:700;color:#dc2626;font-family:'DM Mono',monospace;background:#fee2e2;border-radius:6px;padding:1px 7px">Bal: ${peso(bal)}</div>
           </div>`;
         } else if(rep.status==='gcash'){
           const amt=rep.gcashamount||0;
           if(amt>0&&amt<(rep.total||0)){
             const bal=Math.max(0,(rep.total||0)-amt);
             paymentHtml=`<div style="margin-top:5px;display:flex;flex-direction:column;align-items:flex-end;gap:2px">
-              <div style="font-size:11px;color:var(--text2)">Total: <span style="font-weight:600;font-family:'DM Mono',monospace">${peso(rep.total||0)}</span></div>
+              <div style="font-size:12px;font-weight:700;color:var(--gcash);font-family:'DM Mono',monospace">${peso(rep.total||0)}</div>
               <div style="font-size:11px;color:var(--gcash)">GCash: <span style="font-weight:700;font-family:'DM Mono',monospace">${peso(amt)}</span></div>
               <div style="font-size:12px;font-weight:700;color:#dc2626;font-family:'DM Mono',monospace;background:#fee2e2;border-radius:6px;padding:1px 7px">Bal: ${peso(bal)}</div>
             </div>`;
@@ -1798,6 +1831,7 @@ function openDayPopup(sec, ds, dayBks){
             <div class="dp-venue">${vLabel}${contLabel}</div>
             <div class="dp-guest" style="font-weight:600;color:var(--text);font-size:13px;margin-top:2px">${rep.name}</div>
             <div class="dp-guest">${rep.checkout&&rep.checkout!==rep.date?'Until '+fmtFull(rep.checkout)+(nights>1?' · '+nights+' nights':''):'1 night'}${rep.pax?' · '+rep.pax+' pax':''}</div>
+            ${breakdownHtml}
           </div>
           <div class="dp-badge-wrap">
             <span class="badge ${rep.status}">${STATUS_L[rep.status]||'Walk-in'}</span>
@@ -2040,28 +2074,28 @@ function buildRoomTypeBody(selDate, selCheckout, selectedTypeKey='', prefVenueId
     if(r) selectedTypeKey=r.typeKey;
   }
   const nights=calcNights(selDate, selCheckout);
+  const nightsLabel=nights>1?`<span style="font-size:12px;color:var(--adv);font-weight:700;background:var(--adv-bg);border:1px solid var(--adv-bd);border-radius:20px;padding:2px 10px">${nights} night${nights>1?'s':''}</span>`:'';
+
   const typeSel = ROOM_TYPES.map(rt=>{
     const avail=countAvailableByType(rt.key, selDate, selCheckout);
-    const total=rt.count;
-    const booked=total-avail;
     const isFull=avail===0;
-    const isSel=selectedTypeKey===rt.key;
     let countChip='';
     if(isFull) countChip=`<span style="background:#fee2e2;color:#dc2626;border-radius:20px;padding:2px 7px;font-size:10px;font-weight:700">FULL</span>`;
-    else countChip=`<span style="background:var(--paid-bg);color:var(--paid);border-radius:20px;padding:2px 7px;font-size:10px;font-weight:700">${avail}/${total} free</span>`;
-    return `<div class="bopt${isSel?' sel':''}${isFull?' disabled-opt':''}" 
-      onclick="${isFull?`showRoomFullError('${rt.label}')`:`selRoomType('${rt.key}')`}" 
-      id="rtype-${rt.key}"
-      style="display:flex;flex-direction:column;gap:3px;align-items:center;padding:10px 6px;${isFull?'opacity:.55;cursor:not-allowed;background:#fef2f2;border-color:#fca5a5':''}">
-      <span style="font-size:18px">${rt.icon}</span>
-      <span style="font-size:12px;font-weight:700;color:var(--text)">${rt.label}</span>
-      <span style="font-size:10px;color:var(--text2)">${peso(rt.price)}/night · max ${rt.cap} pax</span>
-      ${countChip}
+    else countChip=`<span style="background:var(--paid-bg);color:var(--paid);border-radius:20px;padding:2px 7px;font-size:10px;font-weight:700">${avail}/${rt.count} free</span>`;
+    return `<div id="rtype-card-${rt.key}" style="border:1.5px solid var(--border);border-radius:var(--r);padding:10px 8px;background:var(--surface);display:flex;align-items:center;gap:8px;${isFull?'opacity:.55;background:#fef2f2;border-color:#fca5a5':''}">
+      <div style="font-size:20px;flex-shrink:0">${rt.icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:700;color:var(--text);line-height:1.3">${rt.label}</div>
+        <div style="font-size:10px;color:var(--text2);margin-top:1px">${peso(rt.price)}/night · max ${rt.cap} pax</div>
+        <div style="margin-top:3px">${countChip}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:0;border:1.5px solid var(--border2);border-radius:8px;overflow:hidden;flex-shrink:0">
+        <button type="button" onclick="changeRoomQty('${rt.key}',-1)" style="width:28px;height:28px;border:none;background:var(--surface2);color:var(--text);font-size:16px;font-weight:700;cursor:pointer;line-height:1;${isFull?'cursor:not-allowed;opacity:.4':''}">−</button>
+        <span id="rqty-${rt.key}" style="width:26px;text-align:center;font-size:14px;font-weight:700;color:var(--text);font-family:'DM Mono',monospace;background:var(--surface);display:inline-block;line-height:28px">0</span>
+        <button type="button" onclick="changeRoomQty('${rt.key}',1)" style="width:28px;height:28px;border:none;background:var(--surface2);color:var(--text);font-size:16px;font-weight:700;cursor:pointer;line-height:1;${isFull?'cursor:not-allowed;opacity:.4':''}">+</button>
+      </div>
     </div>`;
   }).join('');
-
-  const selType=selectedTypeKey?ROOM_TYPES.find(x=>x.key===selectedTypeKey):null;
-  const nightsLabel=nights>1?`<span style="font-size:12px;color:var(--adv);font-weight:700;background:var(--adv-bg);border:1px solid var(--adv-bd);border-radius:20px;padding:2px 10px">${nights} night${nights>1?'s':''}</span>`:'';
 
   return `
     <div class="fg">
@@ -2103,11 +2137,10 @@ function buildRoomTypeBody(selDate, selCheckout, selectedTypeKey='', prefVenueId
       <input type="hidden" id="f-btype" value="Walk-in">
     </div>
     <div class="fg">
-      <label>Room type</label>
-      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px" id="room-type-sel">
+      <label>Room type <span style="font-size:11px;color:var(--text3);font-weight:400;font-style:italic">— select quantity per type</span></label>
+      <div style="display:flex;flex-direction:column;gap:6px" id="room-type-sel">
         ${typeSel}
       </div>
-      <input type="hidden" id="f-room-typekey" value="${selectedTypeKey||''}">
       <div id="room-type-err" style="display:none;background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600;margin-top:6px"></div>
     </div>
     <div class="frow">
@@ -2166,62 +2199,83 @@ function buildRoomTypeBody(selDate, selCheckout, selectedTypeKey='', prefVenueId
     </div>`;
 }
 
-function selRoomType(typeKey){
-  document.querySelectorAll('#room-type-sel .bopt').forEach(el=>el.classList.remove('sel'));
-  const el=document.getElementById('rtype-'+typeKey);
-  if(el) el.classList.add('sel');
-  const fi=document.getElementById('f-room-typekey');
-  if(fi) fi.value=typeKey;
+function changeRoomQty(typeKey, delta){
+  const checkin=document.getElementById('f-date')?.value||today();
+  const checkout=document.getElementById('f-checkout')?.value||tomorrow(checkin);
+  const avail=countAvailableByType(typeKey, checkin, checkout);
+  const el=document.getElementById('rqty-'+typeKey);
+  if(!el) return;
+  let cur=parseInt(el.textContent)||0;
+  cur=Math.max(0, Math.min(avail, cur+delta));
+  el.textContent=cur;
+  // highlight card if qty > 0
+  const card=document.getElementById('rtype-card-'+typeKey);
+  if(card){
+    card.style.borderColor=cur>0?'var(--paid)':'var(--border)';
+    card.style.background=cur>0?'var(--paid-bg)':'var(--surface)';
+  }
   document.getElementById('room-type-err').style.display='none';
   calcRoomTypeTotal();
 }
 function showRoomFullError(label){
   const err=document.getElementById('room-type-err');
-  if(err){err.style.display='block';err.textContent=`⛔ No ${label} rooms available for the selected dates. All ${label} rooms are fully booked.`;}
+  if(err){err.style.display='block';err.textContent=`⛔ No ${label} rooms available for the selected dates. All rooms of this type are fully booked.`;}
 }
 function onRoomTypeDateChange(){
   const checkin=document.getElementById('f-date')?.value||today();
   const checkout=document.getElementById('f-checkout')?.value||tomorrow(checkin);
-  const typeKey=document.getElementById('f-room-typekey')?.value||'';
-  // Rebuild type selector with updated availability
+  // Rebuild type cards with updated availability
   const sel=document.getElementById('room-type-sel');
   if(!sel) return;
   const nights=calcNights(checkin, checkout);
-  // Update nights badge next to checkout label
-  const coLabel=document.querySelector('[for="f-checkout"], label');
-  sel.innerHTML=ROOM_TYPES.map(rt=>{
+  ROOM_TYPES.forEach(rt=>{
     const avail=countAvailableByType(rt.key, checkin, checkout);
-    const total=rt.count;
     const isFull=avail===0;
-    const isSel=typeKey===rt.key;
-    let countChip=isFull
-      ?`<span style="background:#fee2e2;color:#dc2626;border-radius:20px;padding:2px 7px;font-size:10px;font-weight:700">FULL</span>`
-      :`<span style="background:var(--paid-bg);color:var(--paid);border-radius:20px;padding:2px 7px;font-size:10px;font-weight:700">${avail}/${total} free</span>`;
-    return `<div class="bopt${isSel?' sel':''}${isFull?' disabled-opt':''}" 
-      onclick="${isFull?`showRoomFullError('${rt.label}')`:`selRoomType('${rt.key}')`}" 
-      id="rtype-${rt.key}"
-      style="display:flex;flex-direction:column;gap:3px;align-items:center;padding:10px 6px;${isFull?'opacity:.55;cursor:not-allowed;background:#fef2f2;border-color:#fca5a5':''}">
-      <span style="font-size:18px">${rt.icon}</span>
-      <span style="font-size:12px;font-weight:700;color:var(--text)">${rt.label}</span>
-      <span style="font-size:10px;color:var(--text2)">${peso(rt.price)}/night · max ${rt.cap} pax</span>
-      ${countChip}
-    </div>`;
-  }).join('');
-  // Update nights label
-  const coLblEl=document.querySelector('#f-checkout')?.previousElementSibling?.querySelector('label')||document.querySelector('label[for="f-checkout"]');
+    // Update availability chip
+    const card=document.getElementById('rtype-card-'+rt.key);
+    if(card){
+      const chip=card.querySelector('span[id]')||card.querySelectorAll('span')[3];
+      // find the availability chip (last span inside the middle div)
+      const chips=card.querySelectorAll('div > span');
+      chips.forEach(s=>{
+        if(s.textContent.includes('free')||s.textContent==='FULL'){
+          if(isFull){s.style.background='#fee2e2';s.style.color='#dc2626';s.textContent='FULL';}
+          else{s.style.background='var(--paid-bg)';s.style.color='var(--paid)';s.textContent=avail+'/'+rt.count+' free';}
+        }
+      });
+      // clamp qty
+      const qEl=document.getElementById('rqty-'+rt.key);
+      if(qEl){
+        let cur=parseInt(qEl.textContent)||0;
+        if(cur>avail){qEl.textContent=avail;if(avail===0){card.style.borderColor='var(--border)';card.style.background='var(--surface)';}}
+      }
+    }
+  });
+  // Update nights badge
   if(nights>1){
     let badge=document.getElementById('nights-badge');
     if(!badge){badge=document.createElement('span');badge.id='nights-badge';badge.style.cssText='font-size:12px;color:var(--adv);font-weight:700;background:var(--adv-bg);border:1px solid var(--adv-bd);border-radius:20px;padding:2px 10px;margin-left:6px';}
     badge.textContent=nights+' night'+(nights>1?'s':'');
     const coFg=document.getElementById('f-checkout')?.closest('.fg');
     if(coFg&&!document.getElementById('nights-badge')) coFg.querySelector('label').appendChild(badge);
+  } else {
+    const badge=document.getElementById('nights-badge');
+    if(badge) badge.remove();
   }
   calcRoomTypeTotal();
 }
 
+function getRoomQtyMap(){
+  const map={};
+  ROOM_TYPES.forEach(rt=>{
+    const el=document.getElementById('rqty-'+rt.key);
+    map[rt.key]=el?parseInt(el.textContent)||0:0;
+  });
+  return map;
+}
+
 function calcRoomTypeTotal(){
-  const typeKey=document.getElementById('f-room-typekey')?.value||'';
-  const rt=ROOM_TYPES.find(x=>x.key===typeKey);
+  const qtyMap=getRoomQtyMap();
   const checkin=document.getElementById('f-date')?.value||'';
   const checkout=document.getElementById('f-checkout')?.value||'';
   const nights=calcNights(checkin, checkout);
@@ -2230,20 +2284,26 @@ function calcRoomTypeTotal(){
   const cotId=document.getElementById('f-cottage')?.value||'';
   const cotVenue=cotId?ALL_VENUES.find(v=>v.id===cotId):null;
   let total=0, rows='';
-  if(rt){
-    const roomTotal=rt.price*nights;
-    const extbedTotal=extbed*250*nights;
-    const extpaxTotal=extpax*100*nights;
-    const cotTotal=cotVenue?cotVenue.price*nights:0;
-    total=roomTotal+extbedTotal+extpaxTotal+cotTotal;
-    rows+=`<div class="pr-row"><span>${rt.icon} ${rt.label}</span><span class="mono">${peso(rt.price)}/night</span></div>`;
-    if(nights>1) rows+=`<div class="pr-row" style="opacity:.8"><span>× ${nights} nights</span><span class="mono">${peso(roomTotal)}</span></div>`;
-    if(extbed) rows+=`<div class="pr-row"><span>Extra bed ×${extbed}${nights>1?' × '+nights+' nights':''}</span><span class="mono">${peso(extbedTotal)}</span></div>`;
-    if(extpax) rows+=`<div class="pr-row"><span>Extra person ×${extpax}${nights>1?' × '+nights+' nights':''}</span><span class="mono">${peso(extpaxTotal)}</span></div>`;
-    if(cotVenue) rows+=`<div class="pr-row"><span>🌿 ${cotVenue.name}${nights>1?' × '+nights+' nights':''}</span><span class="mono">${peso(cotTotal)}</span></div>`;
-  } else {
-    rows=`<div class="pr-row" style="opacity:.4">Select a room type to see total</div>`;
+  let hasRooms=false;
+  ROOM_TYPES.forEach(rt=>{
+    const qty=qtyMap[rt.key]||0;
+    if(qty>0){
+      hasRooms=true;
+      const sub=rt.price*qty*nights;
+      total+=sub;
+      rows+=`<div class="pr-row"><span>${rt.icon} ${rt.label} ×${qty}${nights>1?' × '+nights+' nights':''}</span><span class="mono">${peso(sub)}</span></div>`;
+    }
+  });
+  if(!hasRooms){
+    rows=`<div class="pr-row" style="opacity:.4">Use + / − to select rooms</div>`;
   }
+  const extbedTotal=extbed*250*nights;
+  const extpaxTotal=extpax*100*nights;
+  const cotTotal=cotVenue?cotVenue.price*nights:0;
+  total+=extbedTotal+extpaxTotal+cotTotal;
+  if(extbed) rows+=`<div class="pr-row"><span>Extra bed ×${extbed}${nights>1?' × '+nights+' nights':''}</span><span class="mono">${peso(extbedTotal)}</span></div>`;
+  if(extpax) rows+=`<div class="pr-row"><span>Extra person ×${extpax}${nights>1?' × '+nights+' nights':''}</span><span class="mono">${peso(extpaxTotal)}</span></div>`;
+  if(cotVenue) rows+=`<div class="pr-row"><span>🌿 ${cotVenue.name}${nights>1?' × '+nights+' nights':''}</span><span class="mono">${peso(cotTotal)}</span></div>`;
   const ps=document.getElementById('price-box');
   if(ps){
     ps.innerHTML=rows+(rt?`<div class="pr-total"><span>Total</span><span class="mono">${peso(total)}</span></div>`:'');
@@ -2255,7 +2315,6 @@ function calcRoomTypeTotal(){
 
 function saveRoomTypeBooking(){
   const name=(document.getElementById('f-name').value||'').trim();
-  const typeKey=document.getElementById('f-room-typekey')?.value||'';
   const status=document.getElementById('f-status').value;
   const btype=document.getElementById('f-btype').value;
   const checkin=document.getElementById('f-date').value;
@@ -2268,36 +2327,70 @@ function saveRoomTypeBooking(){
   const gcashRef=(document.getElementById('f-gcashref')?.value||'').trim();
   const gcashamount=parseFloat(document.getElementById('f-gcashamount')?.value||0)||0;
   const deposit=parseFloat(document.getElementById('f-deposit')?.value||0)||0;
-  if(!typeKey){
-    const err=document.getElementById('room-type-err');
-    if(err){err.style.display='block';err.textContent='⛔ Please select a room type.';}
-    return;
-  }
-  // Find available room of this type
-  const room=pickRoomOfType(typeKey, checkin, checkout);
-  if(!room){
-    const err=document.getElementById('room-type-err');
-    if(err){
-      const rt=ROOM_TYPES.find(x=>x.key===typeKey);
-      err.style.display='block';
-      err.textContent=`⛔ No ${rt?rt.label:'room'} available for ${checkin} – ${checkout}. All rooms of this type are fully booked.`;
-    }
-    return;
-  }
-  const total=calcRoomTypeTotal();
   const idPhoto=(()=>{const img=document.getElementById('photo-preview-img');return img&&img.src&&img.style.display!=='none'?img.src:null;})();
   const cotId=document.getElementById('f-cottage')?.value||'';
   const cotVenue=cotId?ALL_VENUES.find(v=>v.id===cotId):null;
   const nights=calcNights(checkin,checkout);
-  const newId=uid();
-  bookings.push({id:newId,name,contact,gcashRef,gcashamount,status,btype,venueId:room.id,date:checkin,checkout,pax,extbed,extpax,fhHours:0,note,total:total||0,deposit,idPhoto});
-  if(cotVenue){
-    const nights=calcNights(checkin,checkout);
-    bookings.push({id:uid(),name,status,btype,venueId:cotId,date:checkin,checkout,pax,extpax:0,extbed:0,fhHours:0,note:'(with '+name.split(' ')[0]+' — linked from room)',total:cotVenue.price*nights,linkedRoom:newId});
+  const qtyMap=getRoomQtyMap();
+  const total=calcRoomTypeTotal();
+
+  // Validate: at least one room selected
+  const totalRooms=Object.values(qtyMap).reduce((s,v)=>s+v,0);
+  if(totalRooms===0){
+    const err=document.getElementById('room-type-err');
+    if(err){err.style.display='block';err.textContent='⛔ Please select at least one room using the + buttons.';}
+    return;
+  }
+  if(!name){const fn=document.getElementById('f-name');fn.style.borderColor='#dc2626';fn.focus();return;}
+  if(!checkin||!checkout){alert('Please fill in dates.');return;}
+
+  // Check availability for requested quantities
+  const conflicts=[];
+  ROOM_TYPES.forEach(rt=>{
+    const qty=qtyMap[rt.key]||0;
+    if(qty>0){
+      const avail=countAvailableByType(rt.key, checkin, checkout);
+      if(qty>avail) conflicts.push(`${rt.label}: need ${qty} but only ${avail} available`);
+    }
+  });
+  if(conflicts.length>0){
+    const err=document.getElementById('room-type-err');
+    if(err){err.style.display='block';err.textContent='⛔ Not enough rooms available:\n'+conflicts.join(', ');}
+    return;
+  }
+
+  // Book all selected rooms — first room gets the total + deposit, rest linked
+  const groupId=uid();
+  let firstId=null;
+  let roomsBooked=[];
+  ROOM_TYPES.forEach(rt=>{
+    const qty=qtyMap[rt.key]||0;
+    for(let i=0;i<qty;i++){
+      const availRooms=getAvailableRoomsByType(rt.key, checkin, checkout);
+      // exclude already-assigned in this session
+      const alreadyAssigned=roomsBooked.map(r=>r.venueId);
+      const room=availRooms.find(r=>!alreadyAssigned.includes(r.id));
+      if(!room) continue;
+      const roomTotal=rt.price*nights+(i===0&&!firstId?(extbed*250*nights+extpax*100*nights+(cotVenue?cotVenue.price*nights:0)):0);
+      const perRoomTotal=rt.price*nights;
+      const newId=uid();
+      if(!firstId){
+        firstId=newId;
+        bookings.push({id:newId,name,contact,gcashRef,gcashamount,status,btype,venueId:room.id,date:checkin,checkout,pax,extbed,extpax,fhHours:0,note,total:total||0,deposit,idPhoto,multiRoomGroup:groupId});
+      } else {
+        bookings.push({id:newId,name,status,btype,venueId:room.id,date:checkin,checkout,pax,extbed:0,extpax:0,fhHours:0,note:'(multi-room with '+name+')',total:perRoomTotal,deposit:0,multiRoomGroup:groupId,linkedRoom:firstId});
+      }
+      roomsBooked.push({venueId:room.id});
+    }
+  });
+  if(cotVenue&&firstId){
+    bookings.push({id:uid(),name,status,btype,venueId:cotId,date:checkin,checkout,pax,extpax:0,extbed:0,fhHours:0,note:'(with '+name.split(' ')[0]+' — linked from room)',total:cotVenue.price*nights,linkedRoom:firstId});
   }
   save(); closeModal();
   ['rooms','cot','fh'].forEach(s=>renderSection(s));
   renderList();
+  const roomSummary=ROOM_TYPES.filter(rt=>(qtyMap[rt.key]||0)>0).map(rt=>`${qtyMap[rt.key]}× ${rt.label}`).join(', ');
+  showToast(`✅ Booked for ${name}: ${roomSummary}`,'#15803d');
 }
 
 /* ===== FULL VENUE BOOKING ===== */
