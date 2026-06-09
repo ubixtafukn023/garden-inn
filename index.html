@@ -173,7 +173,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .fh-details h3{font-size:15px;font-weight:600;color:var(--fh)}
 .fh-details p{font-size:13px;color:var(--text2);margin-top:3px}
 /* MODAL */
-.mbg{display:none;position:fixed;inset:0;background:rgba(20,18,12,.45);z-index:200;align-items:center;justify-content:center;padding:1rem}
+.mbg{display:none;position:fixed;inset:0;background:rgba(20,18,12,.45);z-index:400;align-items:center;justify-content:center;padding:1rem}
 .mbg.open{display:flex}
 .modal{background:var(--surface);border-radius:var(--rlg);border:1px solid var(--border);padding:1.5rem;width:480px;max-width:100%;position:relative;box-shadow:0 16px 56px rgba(0,0,0,.2);max-height:92vh;overflow-y:auto}
 .modal h2{font-size:17px;font-weight:600;color:var(--text);margin-bottom:1.25rem;letter-spacing:-.02em}
@@ -1842,7 +1842,7 @@ function openDayPopup(sec, ds, dayBks){
       }
     });
   }
-  document.getElementById('dp-add-btn').onclick=()=>{ closeDayPopup(); openAdd(sec,'',ds); };
+  document.getElementById('dp-add-btn').onclick=()=>{ closeDayPopup(); setTimeout(()=>openAdd(sec,'',ds),50); };
   const delDayBtn=document.getElementById('dp-del-day-btn');
   if(dayBks&&dayBks.length>0){
     delDayBtn.style.display='flex';
@@ -1886,11 +1886,6 @@ function deleteAllDayBookings(ds, dayBks){
   ds2.style.display='flex';
 }
 let delPendingDayIds=[], delPendingDayLabel='', delPendingDayDate='';
-document.addEventListener('DOMContentLoaded',()=>{
-  document.getElementById('day-popup-bg').addEventListener('click',e=>{
-    if(e.target===document.getElementById('day-popup-bg')) closeDayPopup();
-  });
-});
 
 /* ===== BOOKED VENUE FILTER ===== */
 function getAvailableVenues(venueList, date, checkout, excludeId=null){
