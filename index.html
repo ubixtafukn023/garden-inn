@@ -707,8 +707,8 @@ body{
   <div class="cal-nav-top">
     <span class="nav-title" id="rooms-nav-title"></span>
     <div class="view-toggle">
-      <button class="vtbtn active" id="vt-rooms-week" onclick="setView('rooms','week')">Week</button>
-      <button class="vtbtn" id="vt-rooms-month" onclick="setView('rooms','month')">Month</button>
+      <button class="vtbtn" id="vt-rooms-week" onclick="setView('rooms','week')">Week</button>
+      <button class="vtbtn active" id="vt-rooms-month" onclick="setView('rooms','month')">Month</button>
     </div>
   </div>
   <div class="scroll-nav" id="scroll-nav-rooms"></div>
@@ -726,8 +726,8 @@ body{
   <div class="cal-nav-top">
     <span class="nav-title" id="cot-nav-title"></span>
     <div class="view-toggle">
-      <button class="vtbtn active" id="vt-cot-week" onclick="setView('cot','week')">Week</button>
-      <button class="vtbtn" id="vt-cot-month" onclick="setView('cot','month')">Month</button>
+      <button class="vtbtn" id="vt-cot-week" onclick="setView('cot','week')">Week</button>
+      <button class="vtbtn active" id="vt-cot-month" onclick="setView('cot','month')">Month</button>
     </div>
   </div>
   <div class="scroll-nav" id="scroll-nav-cot"></div>
@@ -751,8 +751,8 @@ body{
   <div class="cal-nav-top">
     <span class="nav-title" id="fh-nav-title"></span>
     <div class="view-toggle">
-      <button class="vtbtn active" id="vt-fh-week" onclick="setView('fh','week')">Week</button>
-      <button class="vtbtn" id="vt-fh-month" onclick="setView('fh','month')">Month</button>
+      <button class="vtbtn" id="vt-fh-week" onclick="setView('fh','week')">Week</button>
+      <button class="vtbtn active" id="vt-fh-month" onclick="setView('fh','month')">Month</button>
     </div>
   </div>
   <div class="scroll-nav" id="scroll-nav-fh"></div>
@@ -1252,9 +1252,10 @@ const STATUS_P = {paid:'p-paid',adv:'p-adv',wlk:'p-wlk',gcash:'p-gcash'};
 let bookings = [];
 // bookings loaded from Firebase on init (see bottom of script)
 let navs = {rooms:0,cot:0,fh:0};
-let views = {rooms:'week',cot:'week',fh:'week'};
+let views = {rooms:'month',cot:'month',fh:'month'};
 let fRoom='',fStatus='';
 let editingId=null;
+let idPhoto=null;
 
 /* ===== HELPERS ===== */
 function fmt(d){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${dd}`;}
@@ -3225,8 +3226,9 @@ function previewPhoto(input){
   if(!file) return;
   const reader=new FileReader();
   reader.onload=e=>{
+    idPhoto = e.target.result;
     const img=document.getElementById('photo-preview-img');
-    if(img){img.src=e.target.result;img.style.display='block';}
+    if(img){img.src=idPhoto;img.style.display='block';}
   };
   reader.readAsDataURL(file);
 }
