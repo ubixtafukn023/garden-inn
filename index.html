@@ -214,18 +214,30 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .more-lnk{font-size:9px;color:var(--text3);cursor:pointer;margin-top:2px;font-weight:700}
 .more-lnk:hover{color:var(--text)}
 
-/* AMIE & STARLIGHT RATE CARDS */
-.rate-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:1.25rem}
+/* TASTESKILL & AMIE REAL-PHOTO RATE CARDS */
+.rate-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-bottom:1.5rem}
 .rcard{
-  background:var(--surface);border:1px solid var(--border);border-radius:14px;
-  padding:1rem .875rem;text-align:center;transition:all .18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:.75rem;text-align:left;transition:all .22s cubic-bezier(0.2, 0.8, 0.2, 1);
   box-shadow:var(--shadow-sm);position:relative;overflow:hidden;
 }
-.rcard:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-color:var(--border2)}
-.rcard-icon{font-size:26px;display:inline-block;margin-bottom:4px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.06))}
-.rcard-name{font-size:12px;font-weight:700;color:var(--text);letter-spacing:-.01em}
-.rcard-price{font-size:18px;font-weight:700;font-family:'DM Mono',monospace;margin-top:4px;color:var(--text);letter-spacing:-.02em}
-.rcard-note{font-size:10px;color:var(--text3);margin-top:3px;font-weight:500}
+.rcard:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color:var(--border2)}
+.rcard-thumb-wrap{
+  position:relative;width:100%;height:115px;border-radius:12px;overflow:hidden;
+  margin-bottom:10px;background:var(--surface2);border:1px solid rgba(0,0,0,0.04);
+}
+.rcard-thumb{
+  width:100%;height:100%;object-fit:cover;display:block;
+  transition:transform .35s ease;
+}
+.rcard:hover .rcard-thumb{transform:scale(1.05)}
+.rcard-badge{
+  position:absolute;top:7px;right:7px;background:rgba(20,18,15,0.78);backdrop-filter:blur(6px);
+  color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;letter-spacing:0.02em;
+}
+.rcard-name{font-size:13px;font-weight:700;color:var(--text);letter-spacing:-.01em;line-height:1.2}
+.rcard-price{font-size:17px;font-weight:700;font-family:'DM Mono',monospace;margin-top:4px;color:var(--text);letter-spacing:-.02em;display:flex;align-items:baseline;gap:3px}
+.rcard-note{font-size:11px;color:var(--text3);margin-top:4px;font-weight:500;line-height:1.3}
 /* LIST */
 .list-bar{display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center}
 .list-bar input,.list-bar select{font-size:13px;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;outline:none}
@@ -1620,27 +1632,39 @@ function renderMonth(sec){
 
 function renderRoomRates(){
   const groups=[
-    {label:'Standard 2 pax',icon:'🛏️',price:850, note:'4 rooms · max 2 pax each'},
-    {label:'Standard 3 pax',icon:'🛏️',price:1200,note:'1 room · max 3 pax'},
-    {label:'Family Room',   icon:'🏠',price:1700,note:'4 rooms · max 4 pax each'},
-    {label:'Barkadahan',    icon:'🎉',price:3500,note:'1 room · up to 10 pax'},
+    {label:'Standard 2 pax',img:'assets/photos/Standard Room.png',price:850, note:'4 rooms · max 2 pax each',avail:'4 Units'},
+    {label:'Standard 3 pax',img:'assets/photos/Family Room for 3 pax.png',price:1200,note:'1 room · max 3 pax',avail:'1 Unit'},
+    {label:'Family Room',   img:'assets/photos/Family Room.jpg',price:1700,note:'4 rooms · max 4 pax each',avail:'4 Units'},
+    {label:'Barkadahan',    img:'assets/photos/Barkadahan Room.png',price:3500,note:'1 room · up to 10 pax',avail:'1 Unit'},
   ];
   document.getElementById('room-rates').innerHTML=groups.map(g=>`
     <div class="rcard">
-      <div class="rcard-icon">${g.icon}</div>
+      <div class="rcard-thumb-wrap">
+        <img class="rcard-thumb" src="${g.img}" alt="${g.label}" loading="lazy" onerror="this.style.display='none'">
+        <span class="rcard-badge">${g.avail}</span>
+      </div>
       <div class="rcard-name">${g.label}</div>
-      <div class="rcard-price" style="color:var(--adv)">${peso(g.price)}/night</div>
+      <div class="rcard-price">${peso(g.price)}<span style="font-size:11px;font-weight:500;color:var(--text3)">/night</span></div>
       <div class="rcard-note">${g.note}</div>
     </div>`).join('');
 }
 
 function renderCottageRates(){
+  const cotPhotos = {
+    'Mangga Cottage': 'assets/photos/Mangga Cottage.png',
+    'Center Cottage': 'assets/photos/Center Cottage.png',
+    'Malunggay Cottage': 'assets/photos/Malunggay Cottage.png',
+    'Pine Tree Cottage': 'assets/photos/Pine Tree Cottage.png'
+  };
   document.getElementById('cot-rates').innerHTML=COTTAGES.map(c=>`
     <div class="rcard">
-      <div class="rcard-icon">${c.icon}</div>
+      <div class="rcard-thumb-wrap">
+        <img class="rcard-thumb" src="${cotPhotos[c.name]||'assets/photos/Center Cottage.png'}" alt="${c.name}" loading="lazy" onerror="this.style.display='none'">
+        <span class="rcard-badge" style="background:#0891b2">Day/Night</span>
+      </div>
       <div class="rcard-name">${c.name}</div>
       <div class="rcard-price" style="color:var(--cot)">${peso(c.price)}</div>
-      <div class="rcard-note">per booking</div>
+      <div class="rcard-note">Outdoor Cottage</div>
     </div>`).join('');
 }
 
