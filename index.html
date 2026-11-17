@@ -2494,6 +2494,11 @@ function calcRoomTypeTotal(){
 
 function saveRoomTypeBooking(){
   const name=(document.getElementById('f-name').value||'').trim();
+  if(!name){
+    const fn=document.getElementById('f-name');
+    if(fn){fn.style.borderColor='#dc2626';fn.focus();}
+    return;
+  }
   const typeKey=document.getElementById('f-room-typekey')?.value||'';
   const status=document.getElementById('f-status').value;
   const btype=document.getElementById('f-btype').value;
@@ -2524,6 +2529,8 @@ function saveRoomTypeBooking(){
     return;
   }
   const total=calcRoomTypeTotal();
+  const cotId=document.getElementById('f-cottage')?.value||'';
+  const cotVenue=cotId?ALL_VENUES.find(v=>v.id===cotId):null;
   const newId=uid();
   bookings.push({id:newId,name,contact,gcashRef,gcashamount,status,btype,venueId:room.id,date:checkin,checkout,pax,extbed,extpax,fhHours:0,note,total:total||0,deposit,idPhoto});
   if(cotVenue){
