@@ -25,58 +25,75 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#f8f7f4;--surface:#ffffff;--surface2:#f1ece1;--surface3:#e6dfd1;
-  --border:#e4decb;--border2:#cec6b3;
-  --text:#14120f;--text2:#5f584b;--text3:#948b7a;
-  --paid:#059669;--paid-bg:#ecfdf5;--paid-bd:#a7f3d0;
-  --adv:#d97706;--adv-bg:#fffbeb;--adv-bd:#fde68a;
-  --wlk:#2563eb;--wlk-bg:#eff6ff;--wlk-bd:#bfdbfe;
-  --gcash:#0284c7;--gcash-bg:#f0f9ff;--gcash-bd:#bae6fd;
-  --today-c:#7c3aed;--today-bg:#f5f3ff;
-  --cot:#0891b2;--cot-bg:#ecfeff;--cot-bd:#a5f3fc;
-  --fh:#e11d48;--fh-bg:#fff1f2;--fh-bd:#fecdd3;
-  --r:10px;--rlg:16px;--rxl:20px;
-  --shadow-sm:0 1px 2px rgba(20,18,15,0.04);
-  --shadow-md:0 4px 14px rgba(20,18,15,0.06);
-  --shadow-lg:0 10px 28px rgba(20,18,15,0.09);
+  /* Lush Garden & Warm Walnut Palette (TasteSkill Place standard) */
+  --bg:#f6f4ee;
+  --surface:#ffffff;
+  --surface2:#ede7da;
+  --surface3:#dfd7c5;
+  --border:#ddd5c1;
+  --border2:#c9bfab;
+  --text:#1c1915;
+  --text2:#5c5446;
+  --text3:#8f8574;
+  
+  /* Rich Jewel-Tone Accents */
+  --paid:#047857;--paid-bg:#ecfdf5;--paid-bd:#6ee7b7;
+  --adv:#b45309;--adv-bg:#fffbeb;--adv-bd:#fcd34d;
+  --wlk:#1d4ed8;--wlk-bg:#eff6ff;--wlk-bd:#93c5fd;
+  --gcash:#0284c7;--gcash-bg:#f0f9ff;--gcash-bd:#7dd3fc;
+  --today-c:#6d28d9;--today-bg:#ede9fe;
+  --cot:#0f766e;--cot-bg:#f0fdfa;--cot-bd:#5eead4;
+  --fh:#be185d;--fh-bg:#fdf2f8;--fh-bd:#f472b6;
+  
+  /* Radii & Shadows */
+  --r:10px;--rlg:16px;--rxl:22px;
+  --shadow-sm:0 1px 3px rgba(28,25,21,0.05);
+  --shadow-md:0 6px 18px rgba(28,25,21,0.07);
+  --shadow-lg:0 14px 34px rgba(28,25,21,0.11);
 }
-body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;padding-bottom:5rem}
-.app{max-width:1320px;margin:0 auto;padding:1rem 1.25rem}
+body{
+  font-family:'DM Sans',sans-serif;
+  background:linear-gradient(180deg, #f9f8f4 0%, #f3eee3 100%);
+  color:var(--text);min-height:100vh;font-size:14px;padding-bottom:5.5rem;
+}
+.app{max-width:1320px;margin:0 auto;padding:1.2rem 1.25rem}
 
 /* ===== AMIE & STARLIGHT ELEVATED HEADER BAR ===== */
 .header{
-  display:flex;align-items:center;gap:12px;margin-bottom:1rem;flex-wrap:wrap;
-  background:rgba(255,255,255,0.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-  padding:0.75rem 1.15rem;border-radius:var(--rxl);border:1px solid var(--border);
-  box-shadow:var(--shadow-sm);position:sticky;top:8px;z-index:90;
+  display:flex;align-items:center;gap:14px;margin-bottom:1.15rem;flex-wrap:wrap;
+  background:rgba(255,255,255,0.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  padding:0.85rem 1.25rem;border-radius:var(--rxl);border:1px solid var(--border);
+  box-shadow:var(--shadow-md);position:sticky;top:10px;z-index:90;
 }
-.logo{display:flex;align-items:center;gap:10px}
+.logo{display:flex;align-items:center;gap:12px}
 .logo-icon{
-  width:40px;height:40px;background:linear-gradient(135deg, #23201b, #000);
-  border-radius:12px;display:flex;align-items:center;justify-content:center;
-  font-size:20px;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,0.18);
+  width:42px;height:42px;
+  background:linear-gradient(135deg, #1e3a1e 0%, #0f1f10 100%);
+  border-radius:13px;display:flex;align-items:center;justify-content:center;
+  font-size:22px;flex-shrink:0;box-shadow:0 3px 10px rgba(15,31,16,0.25);
+  border:1px solid rgba(255,255,255,0.15);
 }
-.logo h1{font-size:17px;font-weight:700;letter-spacing:-.03em;line-height:1.2;color:var(--text)}
-.logo small{display:block;font-size:11px;color:var(--text2);font-weight:500;letter-spacing:0.01em}
+.logo h1{font-size:18px;font-weight:700;letter-spacing:-.03em;line-height:1.2;color:var(--text)}
+.logo small{display:block;font-size:11px;color:var(--text2);font-weight:600;letter-spacing:0.02em}
 .pill{
-  font-size:11px;padding:4px 10px;border-radius:20px;background:var(--surface2);
-  color:var(--text2);border:1px solid var(--border);font-weight:600;display:inline-flex;align-items:center;gap:4px;
+  font-size:11px;padding:4px 11px;border-radius:20px;background:#e8f5e9;
+  color:#1b5e20;border:1px solid #a5d6a7;font-weight:700;display:inline-flex;align-items:center;gap:4px;
 }
 
 /* Quick Date Stepper in Header */
 .header-date-stepper{
   display:inline-flex;align-items:center;gap:4px;background:var(--surface2);
-  border:1px solid var(--border);border-radius:12px;padding:3px;margin-left:auto;
+  border:1px solid var(--border);border-radius:13px;padding:3px 5px;margin-left:auto;
 }
 .hstep-btn{
-  background:none;border:none;cursor:pointer;width:28px;height:28px;border-radius:8px;
+  background:none;border:none;cursor:pointer;width:30px;height:30px;border-radius:9px;
   display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--text2);
-  transition:all .15s;font-size:13px;
+  transition:all .15s;font-size:14px;
 }
 .hstep-btn:hover{background:var(--surface);color:var(--text);box-shadow:var(--shadow-sm)}
 .hstep-today{
   background:var(--surface);border:1px solid var(--border);color:var(--text);
-  font-size:11px;font-weight:700;padding:4px 9px;border-radius:8px;cursor:pointer;
+  font-size:11px;font-weight:700;padding:5px 11px;border-radius:9px;cursor:pointer;
   transition:all .15s;font-family:'DM Sans',sans-serif;
 }
 .hstep-today:hover{background:var(--today-bg);color:var(--today-c);border-color:var(--today-c)}
@@ -84,21 +101,21 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 /* Floating + New Booking Button (Amie Style) */
 .fab-booking{
   position:fixed;bottom:24px;right:24px;z-index:95;
-  background:linear-gradient(135deg, #181512 0%, #2f2a24 100%);
-  color:#fff;border:none;padding:12px 22px;border-radius:28px;
+  background:linear-gradient(135deg, #047857 0%, #064e3b 100%);
+  color:#fff;border:none;padding:13px 24px;border-radius:30px;
   font-size:14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;
-  box-shadow:0 8px 24px rgba(20,18,15,0.22);transition:all .2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow:0 10px 28px rgba(4,120,87,0.38);transition:all .22s cubic-bezier(0.34, 1.56, 0.64, 1);
   font-family:'DM Sans',sans-serif;
 }
-.fab-booking:hover{transform:translateY(-2px) scale(1.03);box-shadow:0 12px 30px rgba(20,18,15,0.3)}
+.fab-booking:hover{transform:translateY(-3px) scale(1.04);box-shadow:0 14px 34px rgba(4,120,87,0.45)}
 .fab-booking:active{transform:scale(0.97)}
 
 /* Mobile Bottom Navigation Bar (Amie style) */
 .mobile-bottom-nav{
   display:none;position:fixed;bottom:0;left:0;right:0;z-index:90;
-  background:rgba(255,255,255,0.92);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
-  border-top:1px solid var(--border);padding:6px 10px calc(6px + env(safe-area-inset-bottom));
-  justify-content:space-around;box-shadow:0 -4px 16px rgba(0,0,0,0.06);
+  background:rgba(255,255,255,0.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-top:1px solid var(--border);padding:7px 10px calc(7px + env(safe-area-inset-bottom));
+  justify-content:space-around;box-shadow:0 -6px 20px rgba(0,0,0,0.08);
 }
 .mbn-item{
   display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;
@@ -114,39 +131,40 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 
 @media(max-width:768px){
   .mobile-bottom-nav{display:flex}
-  .fab-booking{bottom:72px;right:16px;padding:10px 16px;font-size:13px}
+  .fab-booking{bottom:72px;right:16px;padding:11px 18px;font-size:13px}
   .header-date-stepper{margin-left:0;order:3;width:100%;justify-content:center}
 }
 
-/* ===== AMIE SEGMENTED TABS ===== */
+/* ===== AMIE SEGMENTED TABS WITH VIBRANT PILLS ===== */
 .main-tabs{
-  display:flex;gap:4px;margin-bottom:1.15rem;background:var(--surface2);
-  padding:5px;border-radius:14px;border:1px solid var(--border);flex-wrap:wrap;
+  display:flex;gap:5px;margin-bottom:1.25rem;background:var(--surface2);
+  padding:5px;border-radius:15px;border:1px solid var(--border);flex-wrap:wrap;
+  box-shadow:inset 0 1px 3px rgba(0,0,0,0.04);
 }
 .mtab{
-  padding:8px 16px;font-size:13px;cursor:pointer;border:none;background:none;
-  color:var(--text2);border-radius:10px;transition:all .18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  padding:8px 18px;font-size:13px;cursor:pointer;border:none;background:none;
+  color:var(--text2);border-radius:11px;transition:all .18s cubic-bezier(0.2, 0.8, 0.2, 1);
   font-family:'DM Sans',sans-serif;font-weight:600;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;
 }
 .mtab.active{
   background:var(--surface);color:var(--text);box-shadow:var(--shadow-sm);
   font-weight:700;
 }
-.mtab:hover:not(.active){color:var(--text);background:rgba(255,255,255,0.4)}
+.mtab:hover:not(.active){color:var(--text);background:rgba(255,255,255,0.45)}
 .tab-count{
   font-size:10px;font-weight:700;background:var(--surface3);color:var(--text2);
-  padding:2px 6px;border-radius:12px;line-height:1.2;
+  padding:2px 7px;border-radius:12px;line-height:1.2;
 }
-.mtab.active .tab-count{background:var(--text);color:#fff}
+.mtab.active .tab-count{background:var(--paid);color:#fff}
 .mpanel{display:none}.mpanel.active{display:block}
 
 /* Starlight Modernized Calendar Navigation Strip */
 .cal-nav-top{
   display:flex;align-items:center;justify-content:space-between;gap:12px;
-  margin-bottom:.75rem;background:var(--surface);border:1px solid var(--border);
-  border-radius:14px;padding:8px 14px;box-shadow:var(--shadow-sm);
+  margin-bottom:.85rem;background:var(--surface);border:1px solid var(--border);
+  border-radius:15px;padding:9px 16px;box-shadow:var(--shadow-sm);
 }
-.nav-title{font-size:14px;font-weight:700;color:var(--text);letter-spacing:-.02em}
+.nav-title{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.02em}
 .view-toggle{display:flex;gap:3px;background:var(--surface2);padding:3px;border-radius:10px;border:1px solid var(--border)}
 .vtbtn{
   padding:6px 14px;font-size:12px;border:none;background:none;color:var(--text2);
@@ -154,7 +172,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 }
 .vtbtn.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow-sm)}
 
-.legend{display:flex;gap:12px;margin-bottom:.875rem;flex-wrap:wrap;align-items:center}
+.legend{display:flex;gap:14px;margin-bottom:1rem;flex-wrap:wrap;align-items:center}
 .li{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);font-weight:600}
 .ld{width:11px;height:11px;border-radius:4px;flex-shrink:0}
 .cal-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--border2) var(--surface2);border-radius:18px;box-shadow:var(--shadow-md);border:1px solid var(--border)}
