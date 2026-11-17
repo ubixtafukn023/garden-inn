@@ -843,16 +843,15 @@ body{
 <!-- MESSENGER CONFIRMATION POPUP -->
 <div class="messenger-modal-bg" id="messenger-modal-bg">
   <div class="messenger-modal">
-    <div style="font-size:36px;margin-bottom:6px">💬</div>
-    <h3>Notify Garden Inn Messenger</h3>
-    <p style="font-size:12px;color:var(--text2);margin-bottom:8px">Send booking details directly to Garden Inn Facebook Page</p>
+    <div style="font-size:36px;margin-bottom:6px">📋</div>
+    <h3>Booking Saved!</h3>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:8px">Ready to copy & paste to your Messenger app</p>
     <div class="messenger-preview" id="messenger-preview-text"></div>
     <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
       <button class="btn-s" onclick="closeMessengerModal()" style="font-size:13px">Close</button>
-      <button class="btn-s" onclick="copyMessengerText()" id="msg-copy-btn" style="font-size:13px">📋 Copy</button>
-      <a class="messenger-btn" id="msg-open-btn" href="https://m.me/GardenOfficialInn" target="_blank" onclick="closeMessengerModal()">
-        Open Messenger ➔
-      </a>
+      <button class="btn-p" onclick="copyMessengerText()" id="msg-copy-btn" style="font-size:13px;background:var(--paid)">
+        📋 Copy & Close
+      </button>
     </div>
   </div>
 </div>
@@ -3017,14 +3016,30 @@ function closeMessengerModal(){
 function copyMessengerText(){
   if(navigator.clipboard && currentMessengerText){
     navigator.clipboard.writeText(currentMessengerText).then(()=>{
-      const btn = document.getElementById('msg-copy-btn');
-      btn.textContent = '✅ Copied!';
-      setTimeout(()=>{ btn.textContent = '📋 Copy'; }, 2000);
-      showToast('Copied to clipboard! Ready to paste in Messenger.', '#047857');
+      showToast('✅ Copied! Ready to paste into Messenger.', '#047857');
+      closeMessengerModal();
+    }).catch(()=>{
+      // Fallback
+      fallbackCopyText(currentMessengerText);
     });
   } else {
-    showToast('Clipboard not available', '#dc2626');
+    fallbackCopyText(currentMessengerText);
   }
+}
+
+function fallbackCopyText(text){
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand('copy');
+    showToast('✅ Copied! Ready to paste into Messenger.', '#047857');
+    closeMessengerModal();
+  } catch(e) {
+    showToast('Please copy manually', '#dc2626');
+  }
+  document.body.removeChild(ta);
 }
 
 /* ===== MONTHLY STATEMENT ===== */
