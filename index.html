@@ -462,9 +462,30 @@ body{
 .ci-btn.checked-out{background:#f3f4f6;border-color:#d1d5db;color:#6b7280}
 .ci-timestamp{font-size:10px;font-weight:400;opacity:.8}
 
-/* ===== BOOKING RECEIPT ===== */
+/* ===== BOOKING RECEIPT & MESSENGER ===== */
 .receipt-btn{padding:8px 14px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface);font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--text2);display:inline-flex;align-items:center;gap:5px;transition:all .15s}
 .receipt-btn:hover{background:var(--surface2)}
+.messenger-btn{
+  padding:8px 14px;border-radius:var(--r);border:1px solid #0084ff;background:#0084ff;
+  color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;
+  display:inline-flex;align-items:center;gap:6px;transition:all .15s;text-decoration:none;
+  box-shadow:0 2px 6px rgba(0,132,255,0.25);
+}
+.messenger-btn:hover{background:#0072db;transform:translateY(-1px);box-shadow:0 4px 10px rgba(0,132,255,0.35)}
+.messenger-modal-bg{
+  position:fixed;inset:0;background:rgba(20,18,15,0.5);backdrop-filter:blur(4px);
+  z-index:9999;display:none;align-items:center;justify-content:center;padding:1rem;
+}
+.messenger-modal{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--rxl);
+  padding:1.5rem;width:420px;max-width:100%;box-shadow:var(--shadow-lg);text-align:center;
+}
+.messenger-modal h3{font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px}
+.messenger-preview{
+  background:var(--surface2);border:1px solid var(--border);border-radius:12px;
+  padding:12px;margin:12px 0 16px;text-align:left;font-size:12px;line-height:1.5;
+  color:var(--text);white-space:pre-wrap;font-family:'DM Mono',monospace;max-height:160px;overflow-y:auto;
+}
 
 /* ===== REVENUE CHART ===== */
 .chart-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--rlg);padding:1.25rem;margin-bottom:1.25rem}
@@ -818,6 +839,23 @@ body{
   <div class="mfoot" id="modal-foot"></div>
 </div>
 </div><!-- end .app -->
+
+<!-- MESSENGER CONFIRMATION POPUP -->
+<div class="messenger-modal-bg" id="messenger-modal-bg">
+  <div class="messenger-modal">
+    <div style="font-size:36px;margin-bottom:6px">💬</div>
+    <h3>Notify Garden Inn Messenger</h3>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:8px">Send booking details directly to Garden Inn Facebook Page</p>
+    <div class="messenger-preview" id="messenger-preview-text"></div>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+      <button class="btn-s" onclick="closeMessengerModal()" style="font-size:13px">Close</button>
+      <button class="btn-s" onclick="copyMessengerText()" id="msg-copy-btn" style="font-size:13px">📋 Copy</button>
+      <a class="messenger-btn" id="msg-open-btn" href="https://m.me/GardenOfficialInn" target="_blank" onclick="closeMessengerModal()">
+        Open Messenger ➔
+      </a>
+    </div>
+  </div>
+</div>
 
 <!-- DAY POPUP -->
 <div class="day-popup-bg" id="day-popup-bg">
@@ -2495,6 +2533,7 @@ function saveRoomTypeBooking(){
   save(); closeModal();
   ['rooms','cot','fh'].forEach(s=>renderSection(s));
   renderList();
+  showMessengerPrompt(newId);
 }
 
 /* ===== FULL VENUE BOOKING ===== */
@@ -2778,7 +2817,13 @@ function openEdit(id){
   selStatus(bk.status||'wlk'); selBtype(bk.btype||'Walk-in');
   calcTotal(section);
   setTimeout(()=>updateDepositPreview(),50);
-  document.getElementById('modal-foot').innerHTML=`<button class="btn-d" onclick="openDelScreen('${id}')">🗑 Delete</button><div style="flex:1"></div><button class="receipt-btn" onclick="printReceipt('${id}')">🖨️ Receipt</button><button class="btn-s" onclick="closeModal()">Cancel</button><button class="btn-p${isFH?' fhbtn':''}" onclick="saveBooking('${section}')">Update</button>`;
+  document.getElementById('modal-foot').innerHTML=`
+    <button class="btn-d" onclick="openDelScreen('${id}')">🗑 Delete</button>
+    <div style="flex:1"></div>
+    <button class="messenger-btn" onclick="shareToMessenger('${id}')" title="Send to Messenger">💬 Messenger</button>
+    <button class="receipt-btn" onclick="printReceipt('${id}')">🖨️ Receipt</button>
+    <button class="btn-s" onclick="closeModal()">Cancel</button>
+    <button class="btn-p${isFH?' fhbtn':''}" onclick="saveBooking('${section}')">Update</button>`;
   document.getElementById('mbg').classList.add('open');
 }
 
@@ -2896,6 +2941,7 @@ function saveBooking(section){
   renderSection('cot');
   renderSection('fh');
   renderList();
+  if(!editingId && typeof newId !== 'undefined') showMessengerPrompt(newId);
 }
 
 function showToast(msg,color){
@@ -2914,6 +2960,64 @@ function closeModal(){document.getElementById('mbg').classList.remove('open');}
 document.getElementById('mbg').addEventListener('click',e=>{
   if(e.target===document.getElementById('mbg')) closeModal();
 });
+
+/* ===== MESSENGER INTEGRATION (https://www.facebook.com/GardenOfficialInn) ===== */
+let currentMessengerText = '';
+
+function formatMessengerBooking(id){
+  const bk = bookings.find(b=>b.id===id);
+  if(!bk) return '';
+  const venue = ALL_VENUES.find(v=>v.id===bk.venueId);
+  const statusLabel = bk.status==='paid'?'Fully Paid':bk.status==='adv'?'With Advance':bk.status==='gcash'?'GCash Paid':'Walk-in / Unpaid';
+  const nights = bk.checkout ? calcNights(bk.date, bk.checkout) : 1;
+  const staffName = currentUser ? currentUser.name : 'Staff';
+  
+  return `🏨 GARDEN INN — NEW BOOKING CONFIRMATION
+━━━━━━━━━━━━━━━━━━━━
+👤 Guest: ${bk.name}
+📞 Contact: ${bk.contact || 'N/A'}
+🏡 Venue: ${venue ? venue.icon + ' ' + venue.name : 'Venue'}
+📅 Dates: ${bk.date}${bk.checkout ? ' ➔ ' + bk.checkout : ''} (${nights} night${nights>1?'s':''})
+👥 Pax: ${bk.pax || 'Standard'}
+💳 Status: ${statusLabel}
+💰 Total Amount: ₱${(bk.total||0).toLocaleString()}
+${bk.deposit ? `💵 Advance/Deposit: ₱${bk.deposit.toLocaleString()}\n` : ''}${bk.gcashRef ? `📱 GCash Ref: ${bk.gcashRef}\n` : ''}${bk.note ? `📝 Notes: ${bk.note}\n` : ''}━━━━━━━━━━━━━━━━━━━━
+Booked by: ${staffName}
+https://www.facebook.com/GardenOfficialInn`;
+}
+
+function showMessengerPrompt(id){
+  const text = formatMessengerBooking(id);
+  if(!text) return;
+  currentMessengerText = text;
+  document.getElementById('messenger-preview-text').textContent = text;
+  document.getElementById('messenger-modal-bg').style.display = 'flex';
+}
+
+function shareToMessenger(id){
+  const text = formatMessengerBooking(id);
+  if(!text) return;
+  currentMessengerText = text;
+  document.getElementById('messenger-preview-text').textContent = text;
+  document.getElementById('messenger-modal-bg').style.display = 'flex';
+}
+
+function closeMessengerModal(){
+  document.getElementById('messenger-modal-bg').style.display = 'none';
+}
+
+function copyMessengerText(){
+  if(navigator.clipboard && currentMessengerText){
+    navigator.clipboard.writeText(currentMessengerText).then(()=>{
+      const btn = document.getElementById('msg-copy-btn');
+      btn.textContent = '✅ Copied!';
+      setTimeout(()=>{ btn.textContent = '📋 Copy'; }, 2000);
+      showToast('Copied to clipboard! Ready to paste in Messenger.', '#047857');
+    });
+  } else {
+    showToast('Clipboard not available', '#dc2626');
+  }
+}
 
 /* ===== MONTHLY STATEMENT ===== */
 function populateMonthSelector(){
