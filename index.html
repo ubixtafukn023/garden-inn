@@ -306,20 +306,35 @@ body{
 /* MODAL */
 .mbg{display:none;position:fixed;inset:0;background:rgba(20,18,12,.45);z-index:200;align-items:center;justify-content:center;padding:1rem}
 .mbg.open{display:flex}
-.modal{background:var(--surface);border-radius:var(--rlg);border:1px solid var(--border);padding:1.5rem;width:480px;max-width:100%;position:relative;box-shadow:0 16px 56px rgba(0,0,0,.2);max-height:92vh;overflow-y:auto}
-.modal h2{font-size:17px;font-weight:600;color:var(--text);margin-bottom:1.25rem;letter-spacing:-.02em}
+.modal{
+  background:var(--surface);border-radius:24px;border:1px solid var(--border);
+  padding:1.75rem 1.5rem;width:500px;max-width:100%;position:relative;
+  box-shadow:0 24px 64px rgba(28,25,21,0.22);max-height:92vh;overflow-y:auto;
+}
+.modal h2{font-size:18px;font-weight:800;color:var(--text);margin-bottom:1.25rem;letter-spacing:-.03em}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.fg{margin-bottom:12px}
-.fg label{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em}
-.fg input,.fg select,.fg textarea{width:100%;font-size:14px;padding:8px 11px;border:1px solid var(--border2);border-radius:var(--r);background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;outline:none;transition:border-color .15s}
-.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--text)}
-.fg textarea{resize:vertical;min-height:60px}
-.status-sel{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-top:4px}
-.sopt{padding:8px 4px;border:1.5px solid var(--border);border-radius:var(--r);text-align:center;font-size:11px;cursor:pointer;color:var(--text2);transition:all .15s;font-weight:600;line-height:1.4}
-.sopt.spaid{border-color:var(--paid);background:var(--paid-bg);color:var(--paid)}
-.sopt.sadv{border-color:var(--adv);background:var(--adv-bg);color:var(--adv)}
-.sopt.swlk{border-color:var(--wlk);background:var(--wlk-bg);color:var(--wlk)}
-.sopt.sgcash{border-color:var(--gcash);background:var(--gcash-bg);color:var(--gcash)}
+.fg{margin-bottom:14px}
+.fg label{display:block;font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
+.fg input,.fg select,.fg textarea{
+  width:100%;font-size:14px;padding:10px 13px;border:1.5px solid var(--border);
+  border-radius:12px;background:#faf9f6;color:var(--text);font-family:'DM Sans',sans-serif;
+  outline:none;transition:all .18s ease;box-shadow:inset 0 1px 2px rgba(0,0,0,0.02);
+}
+.fg input:focus,.fg select:focus,.fg textarea:focus{
+  border-color:var(--paid);background:#fff;box-shadow:0 0 0 3px rgba(4,120,87,0.12);
+}
+.fg textarea{resize:vertical;min-height:64px}
+.status-sel{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:4px}
+.sopt{
+  padding:10px 4px;border:1.5px solid var(--border);border-radius:12px;text-align:center;
+  font-size:11px;cursor:pointer;color:var(--text2);transition:all .18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  font-weight:700;line-height:1.4;background:var(--surface);
+}
+.sopt:hover{border-color:var(--border2);transform:translateY(-1px)}
+.sopt.spaid{border-color:var(--paid);background:var(--paid-bg);color:var(--paid);box-shadow:0 2px 8px rgba(4,120,87,0.15)}
+.sopt.sadv{border-color:var(--adv);background:var(--adv-bg);color:var(--adv);box-shadow:0 2px 8px rgba(217,119,6,0.15)}
+.sopt.swlk{border-color:var(--wlk);background:var(--wlk-bg);color:var(--wlk);box-shadow:0 2px 8px rgba(37,99,235,0.15)}
+.sopt.sgcash{border-color:var(--gcash);background:var(--gcash-bg);color:var(--gcash);box-shadow:0 2px 8px rgba(2,132,199,0.15)}
 .btype-sel{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px}
 .bopt{padding:7px 6px;border:1.5px solid var(--border);border-radius:var(--r);text-align:center;font-size:12px;cursor:pointer;color:var(--text2);transition:all .15s;font-weight:500}
 .bopt:hover{border-color:var(--border2);color:var(--text)}
@@ -2163,11 +2178,17 @@ function openAdd(section,venueId='',date=''){
   document.getElementById('modal-body').innerHTML=`
     <div class="fg">
       <label>Guest / Group name</label>
-      <input type="text" id="f-name" placeholder="Enter name" autofocus>
+      <input type="text" id="f-name" placeholder="Enter guest full name" autofocus>
     </div>
-    <div class="fg">
-      <label>Contact number</label>
-      <input type="tel" id="f-contact" placeholder="e.g. 09xx-xxx-xxxx" style="font-size:14px">
+    <div class="frow">
+      <div class="fg">
+        <label>Contact number</label>
+        <input type="tel" id="f-contact" placeholder="09xxxxxxxxx" oninput="this.value=this.value.replace(/[^0-9+]/g,'')" maxlength="15">
+      </div>
+      <div class="fg">
+        <label>Address / City</label>
+        <input type="text" id="f-address" placeholder="e.g. Davao City, Gensan">
+      </div>
     </div>
     <div class="fg">
       <label>Payment status</label>
@@ -2305,11 +2326,17 @@ function buildRoomTypeBody(selDate, selCheckout, selectedTypeKey='', prefVenueId
   return `
     <div class="fg">
       <label>Guest / Group name</label>
-      <input type="text" id="f-name" placeholder="Enter name" autofocus>
+      <input type="text" id="f-name" placeholder="Enter guest full name" autofocus>
     </div>
-    <div class="fg">
-      <label>Contact number</label>
-      <input type="tel" id="f-contact" placeholder="e.g. 09xx-xxx-xxxx">
+    <div class="frow">
+      <div class="fg">
+        <label>Contact number</label>
+        <input type="tel" id="f-contact" placeholder="09xxxxxxxxx" oninput="this.value=this.value.replace(/[^0-9+]/g,'')" maxlength="15">
+      </div>
+      <div class="fg">
+        <label>Address / City</label>
+        <input type="text" id="f-address" placeholder="e.g. Davao City, Gensan">
+      </div>
     </div>
     <div class="fg">
       <label>Payment status</label>
@@ -2509,6 +2536,7 @@ function saveRoomTypeBooking(){
   const extbed=parseInt(document.getElementById('f-extbed')?.value||0)||0;
   const extpax=parseInt(document.getElementById('f-extpax')?.value||0)||0;
   const contact=(document.getElementById('f-contact')?.value||'').trim();
+  const address=(document.getElementById('f-address')?.value||'').trim();
   const gcashRef=(document.getElementById('f-gcashref')?.value||'').trim();
   const gcashamount=parseFloat(document.getElementById('f-gcashamount')?.value||0)||0;
   const deposit=parseFloat(document.getElementById('f-deposit')?.value||0)||0;
@@ -2532,7 +2560,7 @@ function saveRoomTypeBooking(){
   const cotId=document.getElementById('f-cottage')?.value||'';
   const cotVenue=cotId?ALL_VENUES.find(v=>v.id===cotId):null;
   const newId=uid();
-  bookings.push({id:newId,name,contact,gcashRef,gcashamount,status,btype,venueId:room.id,date:checkin,checkout,pax,extbed,extpax,fhHours:0,note,total:total||0,deposit,idPhoto});
+  bookings.push({id:newId,name,contact,address,gcashRef,gcashamount,status,btype,venueId:room.id,date:checkin,checkout,pax,extbed,extpax,fhHours:0,note,total:total||0,deposit,idPhoto});
   if(cotVenue){
     const nights=calcNights(checkin,checkout);
     bookings.push({id:uid(),name,status,btype,venueId:cotId,date:checkin,checkout,pax,extpax:0,extbed:0,fhHours:0,note:'(with '+name.split(' ')[0]+' — linked from room)',total:cotVenue.price*nights,linkedRoom:newId});
@@ -2566,9 +2594,15 @@ function openFullVenueBooking(){
       <label>Guest / Group name</label>
       <input type="text" id="f-name" placeholder="e.g. Santos Family" value="${name}" autofocus>
     </div>
-    <div class="fg">
-      <label>Contact number</label>
-      <input type="tel" id="f-contact" placeholder="e.g. 09xx-xxx-xxxx">
+    <div class="frow">
+      <div class="fg">
+        <label>Contact number</label>
+        <input type="tel" id="f-contact" placeholder="09xxxxxxxxx" oninput="this.value=this.value.replace(/[^0-9+]/g,'')" maxlength="15">
+      </div>
+      <div class="fg">
+        <label>Address / City</label>
+        <input type="text" id="f-address" placeholder="e.g. Davao City, Gensan">
+      </div>
     </div>
     <div class="fg">
       <label>Payment status</label>
@@ -2735,9 +2769,15 @@ function openEdit(id){
       <label>Guest / Group name</label>
       <input type="text" id="f-name" value="${bk.name}">
     </div>
-    <div class="fg">
-      <label>Contact number</label>
-      <input type="tel" id="f-contact" value="${bk.contact||''}" placeholder="e.g. 09xx-xxx-xxxx" style="font-size:14px">
+    <div class="frow">
+      <div class="fg">
+        <label>Contact number</label>
+        <input type="tel" id="f-contact" value="${bk.contact||''}" placeholder="09xxxxxxxxx" oninput="this.value=this.value.replace(/[^0-9+]/g,'')" maxlength="15">
+      </div>
+      <div class="fg">
+        <label>Address / City</label>
+        <input type="text" id="f-address" value="${bk.address||''}" placeholder="e.g. Davao City, Gensan">
+      </div>
     </div>
     <div class="fg">
       <label>Payment status</label>
@@ -2913,6 +2953,7 @@ function saveBooking(section){
   const extpax=!isFH?(parseInt(document.getElementById('f-extpax')?.value||0)||0):0;
   const fhHours=isFH?(parseInt(document.getElementById('f-fhhours')?.value||FH_BASE_HRS)||FH_BASE_HRS):0;
   const contact=(document.getElementById('f-contact')?.value||'').trim();
+  const address=(document.getElementById('f-address')?.value||'').trim();
   const gcashRef=(document.getElementById('f-gcashref')?.value||'').trim();
   const gcashamount=parseFloat(document.getElementById('f-gcashamount')?.value||0)||0;
   const deposit=parseFloat(document.getElementById('f-deposit')?.value||0)||0;
@@ -2925,7 +2966,7 @@ function saveBooking(section){
     return;
   }
   clearConflictError();
-  const data={name,contact,gcashRef,gcashamount,status,btype,venueId,date,checkout,pax,extbed,extpax,fhHours,note,total:total||0,deposit,idPhoto};
+  const data={name,contact,address,gcashRef,gcashamount,status,btype,venueId,date,checkout,pax,extbed,extpax,fhHours,note,total:total||0,deposit,idPhoto};
   if(editingId){
     const idx=bookings.findIndex(b=>b.id===editingId);
     if(idx>-1) bookings[idx]={...bookings[idx],...data};
@@ -2982,7 +3023,7 @@ function formatMessengerBooking(id){
   return `🏨 GARDEN INN — NEW BOOKING CONFIRMATION
 ━━━━━━━━━━━━━━━━━━━━
 👤 Guest: ${bk.name}
-📞 Contact: ${bk.contact || 'N/A'}
+📞 Contact: ${bk.contact || 'N/A'}${bk.address ? `\n📍 Address: ${bk.address}` : ''}
 🏡 Venue: ${venue ? venue.icon + ' ' + venue.name : 'Venue'}
 📅 Dates: ${bk.date}${bk.checkout ? ' ➔ ' + bk.checkout : ''} (${nights} night${nights>1?'s':''})
 👥 Pax: ${bk.pax || 'Standard'}
