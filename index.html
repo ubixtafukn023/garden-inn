@@ -964,6 +964,7 @@ let loginPinEntry = '';
 
 function initLogin(){
   const ul = document.getElementById('user-list');
+  if(!ul) return;
   ul.innerHTML = USERS.map(u=>`
     <div class="user-btn" id="ubtn-${u.id}" onclick="selectLoginUser('${u.id}')">
       <div class="user-avatar" style="background:${u.color}">${u.avatar}</div>
@@ -973,6 +974,9 @@ function initLogin(){
       </div>
     </div>`).join('');
 }
+// Run initLogin immediately so user buttons appear with zero delay
+initLogin();
+document.addEventListener('DOMContentLoaded', initLogin);
 
 function selectLoginUser(uid){
   loginSelectedUser = USERS.find(u=>u.id===uid);
