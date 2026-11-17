@@ -2520,10 +2520,31 @@ function calcRoomTypeTotal(){
 }
 
 function saveRoomTypeBooking(){
-  const name=(document.getElementById('f-name').value||'').trim();
+  const fn=document.getElementById('f-name');
+  const fc=document.getElementById('f-contact');
+  const fa=document.getElementById('f-address');
+  const name=(fn?.value||'').trim();
+  const contact=(fc?.value||'').trim();
+  const address=(fa?.value||'').trim();
+
+  // Reset border colors
+  if(fn) fn.style.borderColor='';
+  if(fc) fc.style.borderColor='';
+  if(fa) fa.style.borderColor='';
+
   if(!name){
-    const fn=document.getElementById('f-name');
     if(fn){fn.style.borderColor='#dc2626';fn.focus();}
+    showToast('⚠️ Guest Name is required.', '#dc2626');
+    return;
+  }
+  if(!contact){
+    if(fc){fc.style.borderColor='#dc2626';fc.focus();}
+    showToast('⚠️ Contact number is required.', '#dc2626');
+    return;
+  }
+  if(!address){
+    if(fa){fa.style.borderColor='#dc2626';fa.focus();}
+    showToast('⚠️ Address / City is required.', '#dc2626');
     return;
   }
   const typeKey=document.getElementById('f-room-typekey')?.value||'';
@@ -2702,7 +2723,32 @@ function saveFullVenueBooking(){
   const contact=(document.getElementById('f-contact')?.value||'').trim();
   const gcashRef=(document.getElementById('f-gcashref')?.value||'').trim();
   const deposit=parseFloat(document.getElementById('f-deposit')?.value||0)||0;
-  if(!name){const fn=document.getElementById('f-name');fn.style.borderColor='#dc2626';fn.focus();return;}
+  const fn=document.getElementById('f-name');
+  const fc=document.getElementById('f-contact');
+  const fa=document.getElementById('f-address');
+  const name=(fn?.value||'').trim();
+  const contact=(fc?.value||'').trim();
+  const address=(fa?.value||'').trim();
+
+  if(fn) fn.style.borderColor='';
+  if(fc) fc.style.borderColor='';
+  if(fa) fa.style.borderColor='';
+
+  if(!name){
+    if(fn){fn.style.borderColor='#dc2626';fn.focus();}
+    showToast('⚠️ Guest Name is required.', '#dc2626');
+    return;
+  }
+  if(!contact){
+    if(fc){fc.style.borderColor='#dc2626';fc.focus();}
+    showToast('⚠️ Contact number is required.', '#dc2626');
+    return;
+  }
+  if(!address){
+    if(fa){fa.style.borderColor='#dc2626';fa.focus();}
+    showToast('⚠️ Address / City is required.', '#dc2626');
+    return;
+  }
   if(!checkin||!checkout){alert('Please fill in dates.');return;}
   // Check all rooms free
   const blocked=ROOMS.filter(r=>hasConflict(r.id, checkin, checkout));
@@ -2940,7 +2986,34 @@ function selBtype(t){
 }
 
 function saveBooking(section){
-  const name=(document.getElementById('f-name').value||'').trim();
+  const fn=document.getElementById('f-name');
+  const fc=document.getElementById('f-contact');
+  const fa=document.getElementById('f-address');
+  const name=(fn?.value||'').trim();
+  const contact=(fc?.value||'').trim();
+  const address=(fa?.value||'').trim();
+
+  // Reset border colors
+  if(fn) fn.style.borderColor='';
+  if(fc) fc.style.borderColor='';
+  if(fa) fa.style.borderColor='';
+
+  if(!name){
+    if(fn){fn.style.borderColor='#dc2626';fn.focus();}
+    showToast('⚠️ Guest Name is required.', '#dc2626');
+    return;
+  }
+  if(!contact){
+    if(fc){fc.style.borderColor='#dc2626';fc.focus();}
+    showToast('⚠️ Contact number is required.', '#dc2626');
+    return;
+  }
+  if(!address){
+    if(fa){fa.style.borderColor='#dc2626';fa.focus();}
+    showToast('⚠️ Address / City is required.', '#dc2626');
+    return;
+  }
+
   const status=document.getElementById('f-status').value;
   const btype=document.getElementById('f-btype').value;
   const venueId=document.getElementById('f-venue').value;
@@ -2952,13 +3025,10 @@ function saveBooking(section){
   const extbed=!isFH?(parseInt(document.getElementById('f-extbed')?.value||0)||0):0;
   const extpax=!isFH?(parseInt(document.getElementById('f-extpax')?.value||0)||0):0;
   const fhHours=isFH?(parseInt(document.getElementById('f-fhhours')?.value||FH_BASE_HRS)||FH_BASE_HRS):0;
-  const contact=(document.getElementById('f-contact')?.value||'').trim();
-  const address=(document.getElementById('f-address')?.value||'').trim();
   const gcashRef=(document.getElementById('f-gcashref')?.value||'').trim();
   const gcashamount=parseFloat(document.getElementById('f-gcashamount')?.value||0)||0;
   const deposit=parseFloat(document.getElementById('f-deposit')?.value||0)||0;
   const total=calcTotal(section);
-  if(!name){const fn=document.getElementById('f-name');fn.style.borderColor='#dc2626';fn.focus();return;}
   if(!date)return;
   // conflict check
   if(hasConflict(venueId, date, checkout, editingId||null)){
