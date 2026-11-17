@@ -2556,8 +2556,6 @@ function saveRoomTypeBooking(){
   const note=(document.getElementById('f-note').value||'').trim();
   const extbed=parseInt(document.getElementById('f-extbed')?.value||0)||0;
   const extpax=parseInt(document.getElementById('f-extpax')?.value||0)||0;
-  const contact=(document.getElementById('f-contact')?.value||'').trim();
-  const address=(document.getElementById('f-address')?.value||'').trim();
   const gcashRef=(document.getElementById('f-gcashref')?.value||'').trim();
   const gcashamount=parseFloat(document.getElementById('f-gcashamount')?.value||0)||0;
   const deposit=parseFloat(document.getElementById('f-deposit')?.value||0)||0;
@@ -2714,15 +2712,6 @@ function calcFullVenueTotal(){
 }
 
 function saveFullVenueBooking(){
-  const name=(document.getElementById('f-name').value||'').trim();
-  const status=document.getElementById('f-status').value;
-  const checkin=document.getElementById('f-date').value;
-  const checkout=document.getElementById('f-checkout').value;
-  const pax=document.getElementById('f-pax').value;
-  const note=(document.getElementById('f-note').value||'').trim();
-  const contact=(document.getElementById('f-contact')?.value||'').trim();
-  const gcashRef=(document.getElementById('f-gcashref')?.value||'').trim();
-  const deposit=parseFloat(document.getElementById('f-deposit')?.value||0)||0;
   const fn=document.getElementById('f-name');
   const fc=document.getElementById('f-contact');
   const fa=document.getElementById('f-address');
@@ -2749,6 +2738,14 @@ function saveFullVenueBooking(){
     showToast('⚠️ Address / City is required.', '#dc2626');
     return;
   }
+
+  const status=document.getElementById('f-status').value;
+  const checkin=document.getElementById('f-date').value;
+  const checkout=document.getElementById('f-checkout').value;
+  const pax=document.getElementById('f-pax').value;
+  const note=(document.getElementById('f-note').value||'').trim();
+  const gcashRef=(document.getElementById('f-gcashref')?.value||'').trim();
+  const deposit=parseFloat(document.getElementById('f-deposit')?.value||0)||0;
   if(!checkin||!checkout){alert('Please fill in dates.');return;}
   // Check all rooms free
   const blocked=ROOMS.filter(r=>hasConflict(r.id, checkin, checkout));
