@@ -971,7 +971,85 @@ function saveDelLog(){
 let loginSelectedUser = null;
 let loginPinEntry = '';
 
+/* --- SESSION PERSISTENCE & ACCIDENTAL BACK / RELOAD GRACE PERIOD --- */
+const SESSION_KEY = 'gi_session_user';
+const LAST_ACTIVE_KEY = 'gi_last_active';
+const BACK_GRACE_MS = 10000; // 10 seconds grace period
+
+function saveSessionUser(user){
+  try {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(user));
+    sessionStorage.setItem(LAST_ACTIVE_KEY, Date.now().toString());
+  } catch(e){}
+}
+
+function clearSessionUser(){
+  try {
+    sessionStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(LAST_ACTIVE_KEY);
+  } catch(e){}
+}
+
+function restoreSessionIfValid(){
+  try {
+    const rawUser = sessionStorage.getItem(SESSION_KEY);
+    const rawTime = sessionStorage.getItem(LAST_ACTIVE_KEY);
+    if(!rawUser || !rawTime) return false;
+    const lastActive = parseInt(rawTime, 10);
+    const elapsed = Date.now() - lastActive;
+    if(elapsed <= BACK_GRACE_MS){
+      const parsed = JSON.parse(rawUser);
+      const matched = USERS.find(u => u.id === parsed.id);
+      if(matched){
+        currentUser = matched;
+        const ls = document.getElementById('login-screen');
+        if(ls) ls.style.display = 'none';
+        renderSessionBadge();
+        // refresh timestamp
+        sessionStorage.setItem(LAST_ACTIVE_KEY, Date.now().toString());
+        return true;
+      }
+    }
+  } catch(e){}
+  return false;
+}
+
+// Keep active timestamp fresh while user interacts with the app
+function touchSession(){
+  if(currentUser){
+    try { sessionStorage.setItem(LAST_ACTIVE_KEY, Date.now().toString()); } catch(e){}
+  }
+}
+['click','touchstart','keydown','scroll'].forEach(evt => {
+  window.addEventListener(evt, touchSession, { passive: true });
+});
+
+// Update timestamp right when leaving/going back
+window.addEventListener('pagehide', () => {
+  if(currentUser){
+    try { sessionStorage.setItem(LAST_ACTIVE_KEY, Date.now().toString()); } catch(e){}
+  }
+});
+window.addEventListener('beforeunload', () => {
+  if(currentUser){
+    try { sessionStorage.setItem(LAST_ACTIVE_KEY, Date.now().toString()); } catch(e){}
+  }
+});
+
+// Prevent accidental browser back button from quitting the app
+if(window.history && window.history.pushState){
+  window.history.pushState({ page: 'garden-inn' }, '', window.location.href);
+  window.addEventListener('popstate', (e) => {
+    // If user presses back button inside the app, keep session alive and prevent exiting
+    if(currentUser){
+      saveSessionUser(currentUser);
+      window.history.pushState({ page: 'garden-inn' }, '', window.location.href);
+    }
+  });
+}
+
 function initLogin(){
+  if(restoreSessionIfValid()) return;
   const ul = document.getElementById('user-list');
   if(!ul) return;
   ul.innerHTML = USERS.map(u=>`
@@ -1019,6 +1097,7 @@ function loginBack2(){
 function checkLoginPin(){
   if(loginPinEntry===loginSelectedUser.pin){
     currentUser=loginSelectedUser;
+    saveSessionUser(currentUser);
     document.getElementById('login-screen').style.display='none';
     renderSessionBadge();
   } else {
@@ -1037,6 +1116,7 @@ function renderSessionBadge(){
 }
 function logoutUser(){
   if(!confirm('Sign out of Garden Inn?')) return;
+  clearSessionUser();
   currentUser=null;
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('session-wrap').innerHTML='';
@@ -3614,7 +3694,7 @@ Promise.all([
   renderSection('rooms');
   renderSection('cot');
   renderSection('fh');
-  initLogin();
+  if(!restoreSessionIfValid()){ initLogin(); }
   document.getElementById('day-popup-bg').addEventListener('click',e=>{if(e.target===document.getElementById('day-popup-bg'))closeDayPopup();});
   // Listen for real-time changes from other devices
   db.ref('rcs_v5').on('value', snap=>{
