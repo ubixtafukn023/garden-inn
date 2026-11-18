@@ -42,6 +42,7 @@
   --wlk:#1d4ed8;--wlk-bg:#eff6ff;--wlk-bd:#93c5fd;
   --gcash:#0284c7;--gcash-bg:#f0f9ff;--gcash-bd:#7dd3fc;
   --today-c:#6d28d9;--today-bg:#ede9fe;
+  --otw:#c026d3;--otw-bg:#fdf4ff;--otw-bd:#f0abfc;
   --cot:#0f766e;--cot-bg:#f0fdfa;--cot-bd:#5eead4;
   --fh:#be185d;--fh-bg:#fdf2f8;--fh-bd:#f472b6;
   
@@ -209,6 +210,7 @@ body{
 .p-adv{background:#fffbeb;color:#92400e;border-color:#fde68a}
 .p-wlk{background:#eff6ff;color:#1e40af;border-color:#bfdbfe}
 .p-gcash{background:#f0f9ff;color:#0369a1;border-color:#bae6fd}
+.p-otw{background:#fdf4ff;color:#a21caf;border-color:#f0abfc;box-shadow:0 1px 3px rgba(192,38,211,0.12)}
 .p-cot{background:#ecfeff;color:#155e75;border-color:#a5f3fc}
 .p-fh{background:#fff1f2;color:#9f1239;border-color:#fecdd3}
 .add-btn{position:absolute;bottom:4px;right:4px;width:20px;height:20px;border-radius:50%;background:var(--surface2);border:1px solid var(--border2);color:var(--text2);font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity .15s;font-weight:700}
@@ -277,6 +279,7 @@ body{
 .badge.adv{background:var(--adv-bg);color:var(--adv)}
 .badge.wlk{background:var(--wlk-bg);color:var(--wlk)}
 .badge.gcash{background:var(--gcash-bg);color:var(--gcash);border-color:var(--gcash-bd)}
+.badge.otw{background:var(--otw-bg);color:var(--otw);border:1px solid var(--otw-bd)}
 .badge.cot{background:var(--cot-bg);color:var(--cot)}
 .badge.fh{background:var(--fh-bg);color:var(--fh)}
 .badge.neutral{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
@@ -324,7 +327,7 @@ body{
   border-color:var(--paid);background:#fff;box-shadow:0 0 0 3px rgba(4,120,87,0.12);
 }
 .fg textarea{resize:vertical;min-height:64px}
-.status-sel{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:4px}
+.status-sel{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-top:4px}
 .sopt{
   padding:10px 4px;border:1.5px solid var(--border);border-radius:12px;text-align:center;
   font-size:11px;cursor:pointer;color:var(--text2);transition:all .18s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -335,6 +338,7 @@ body{
 .sopt.sadv{border-color:var(--adv);background:var(--adv-bg);color:var(--adv);box-shadow:0 2px 8px rgba(217,119,6,0.15)}
 .sopt.swlk{border-color:var(--wlk);background:var(--wlk-bg);color:var(--wlk);box-shadow:0 2px 8px rgba(37,99,235,0.15)}
 .sopt.sgcash{border-color:var(--gcash);background:var(--gcash-bg);color:var(--gcash);box-shadow:0 2px 8px rgba(2,132,199,0.15)}
+.sopt.sotw{border-color:var(--otw);background:var(--otw-bg);color:var(--otw);box-shadow:0 2px 8px rgba(192,38,211,0.18)}
 .btype-sel{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px}
 .bopt{padding:7px 6px;border:1.5px solid var(--border);border-radius:var(--r);text-align:center;font-size:12px;cursor:pointer;color:var(--text2);transition:all .15s;font-weight:500}
 .bopt:hover{border-color:var(--border2);color:var(--text)}
@@ -717,7 +721,8 @@ body{
   <div class="legend">
     <div class="li"><div class="ld" style="background:#15803d;border:1px solid #86efac"></div>Fully paid</div>
     <div class="li"><div class="ld" style="background:#b45309;border:1px solid #fcd34d"></div>With advance</div>
-    <div class="li"><div class="ld" style="background:#1d4ed8;border:1px solid #93c5fd"></div>Walk-in / No advance</div>
+    <div class="li"><div class="ld" style="background:#c026d3;border:1px solid #f0abfc"></div>🚗 On the way (No advance)</div>
+    <div class="li"><div class="ld" style="background:#1d4ed8;border:1px solid #93c5fd"></div>Walk-in / Cash</div>
   </div>
   <div class="cal-nav-top">
     <span class="nav-title" id="rooms-nav-title"></span>
@@ -736,6 +741,7 @@ body{
   <div class="legend">
     <div class="li"><div class="ld" style="background:#15803d;border:1px solid #86efac"></div>Fully paid</div>
     <div class="li"><div class="ld" style="background:#b45309;border:1px solid #fcd34d"></div>With advance</div>
+    <div class="li"><div class="ld" style="background:#c026d3;border:1px solid #f0abfc"></div>🚗 On the way (No advance)</div>
     <div class="li"><div class="ld" style="background:#0e7490;border:1px solid #67e8f9"></div>Walk-in / Cottage</div>
   </div>
   <div class="cal-nav-top">
@@ -761,6 +767,7 @@ body{
   <div class="legend">
     <div class="li"><div class="ld" style="background:#15803d;border:1px solid #86efac"></div>Fully paid</div>
     <div class="li"><div class="ld" style="background:#b45309;border:1px solid #fcd34d"></div>With advance</div>
+    <div class="li"><div class="ld" style="background:#c026d3;border:1px solid #f0abfc"></div>🚗 On the way (No advance)</div>
     <div class="li"><div class="ld" style="background:#be185d;border:1px solid #f9a8d4"></div>Walk-in / Function Hall</div>
   </div>
   <div class="cal-nav-top">
@@ -783,6 +790,8 @@ body{
       <option value="">All payment</option>
       <option value="paid">Fully paid</option>
       <option value="adv">With advance</option>
+      <option value="otw">🚗 On the way (No advance)</option>
+      <option value="gcash">GCash</option>
       <option value="wlk">Walk-in</option>
     </select>
     <input type="date" id="date-filter" onchange="renderList()">
@@ -1264,8 +1273,8 @@ const FH_BASE_HRS = 4;
 const FH_BASE     = 4000;
 const FH_EXT      = 1000;
 
-const STATUS_L = {paid:'Fully paid',adv:'With advance',wlk:'Walk-in',gcash:'GCash'};
-const STATUS_P = {paid:'p-paid',adv:'p-adv',wlk:'p-wlk',gcash:'p-gcash'};
+const STATUS_L = {paid:'Fully paid',adv:'With advance',otw:'🚗 On the way (No adv)',wlk:'Walk-in',gcash:'GCash'};
+const STATUS_P = {paid:'p-paid',adv:'p-adv',otw:'p-otw',wlk:'p-wlk',gcash:'p-gcash'};
 
 let bookings = [];
 // bookings loaded from Firebase on init (see bottom of script)
@@ -1342,6 +1351,7 @@ function pillAmountLabel(bk){
     }
     return peso(bk.total);
   }
+  if(bk.status==='otw') return '🚗 On the way · No adv (' + peso(bk.total) + ')';
   if(bk.status==='paid') return peso(bk.total);
   return peso(bk.total); // walk-in
 }
@@ -1437,6 +1447,7 @@ function setView(sec,v){
 
 /* ===== PILL CLASS ===== */
 function pillCls(status,kind){
+  if(status==='otw') return 'p-otw';
   if(kind==='fh') return status==='paid'?'p-paid':status==='adv'?'p-adv':status==='gcash'?'p-gcash':'p-fh';
   if(kind==='cottage') return status==='paid'?'p-paid':status==='adv'?'p-adv':status==='gcash'?'p-gcash':'p-cot';
   return STATUS_P[status]||'p-wlk';
@@ -1444,6 +1455,7 @@ function pillCls(status,kind){
 function dotColor(status,kind){
   if(status==='paid') return 'var(--paid)';
   if(status==='adv')  return 'var(--adv)';
+  if(status==='otw')  return 'var(--otw)';
   if(kind==='fh')     return 'var(--fh)';
   if(kind==='cottage')return 'var(--cot)';
   return 'var(--wlk)';
@@ -1796,6 +1808,7 @@ function renderOverview(){
   const total=bookings.length;
   const paid=bookings.filter(b=>b.status==='paid').length;
   const adv=bookings.filter(b=>b.status==='adv').length;
+  const otw=bookings.filter(b=>b.status==='otw').length;
   const wlk=bookings.filter(b=>b.status==='wlk').length;
   const roomBks=bookings.filter(b=>{const v=ALL_VENUES.find(x=>x.id===b.venueId);return v&&v.kind==='room';});
   const cotBks=bookings.filter(b=>{const v=ALL_VENUES.find(x=>x.id===b.venueId);return v&&v.kind==='cottage';});
@@ -1804,6 +1817,7 @@ function renderOverview(){
     <div class="scard"><div class="snum">${total}</div><div class="slbl">Total</div></div>
     <div class="scard"><div class="snum" style="color:var(--paid)">${paid}</div><div class="slbl">Fully paid</div></div>
     <div class="scard"><div class="snum" style="color:var(--adv)">${adv}</div><div class="slbl">With advance</div></div>
+    <div class="scard"><div class="snum" style="color:var(--otw)">${otw}</div><div class="slbl">🚗 On the way</div></div>
     <div class="scard"><div class="snum" style="color:var(--wlk)">${wlk}</div><div class="slbl">Walk-in</div></div>
     <div class="scard"><div class="snum">${roomBks.length}</div><div class="slbl">Room bookings</div></div>
     <div class="scard"><div class="snum" style="color:var(--cot)">${cotBks.length}</div><div class="slbl">Cottage bookings</div></div>
@@ -2011,7 +2025,7 @@ function openDayPopup(sec, ds, dayBks){
       const rt=v?ROOM_TYPES.find(x=>x.key===v.typeKey):null;
       const isCheckin=rep.date===ds;
       const contLabel=!isCheckin?'<span style="font-size:10px;background:#f3f4f6;color:#6b7280;border-radius:20px;padding:1px 6px;margin-left:4px">cont.</span>':'';
-      const statusColors={paid:'var(--paid)',adv:'var(--adv)',wlk:'var(--wlk)',gcash:'var(--gcash)'};
+      const statusColors={paid:'var(--paid)',adv:'var(--adv)',otw:'var(--otw)',wlk:'var(--wlk)',gcash:'var(--gcash)'};
       const sc=statusColors[rep.status]||'var(--text2)';
 
       if(group.length>1){
@@ -2069,6 +2083,11 @@ function openDayPopup(sec, ds, dayBks){
           } else {
             paymentHtml=`<div style="margin-top:5px;font-size:13px;font-weight:700;color:var(--gcash);font-family:'DM Mono',monospace">${peso(rep.total||0)}</div>`;
           }
+        } else if(rep.status==='otw'){
+          paymentHtml=`<div style="margin-top:5px;display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+            <div style="font-size:11px;color:var(--otw);font-weight:700;background:var(--otw-bg);border:1px solid var(--otw-bd);border-radius:6px;padding:2px 7px">🚗 On the way · No advance</div>
+            <div style="font-size:12px;font-weight:700;color:var(--text);font-family:'DM Mono',monospace">${peso(rep.total||0)} due on arrival</div>
+          </div>`;
         } else if(rep.status==='paid'){
           paymentHtml=`<div style="margin-top:5px;font-size:13px;font-weight:700;color:var(--paid);font-family:'DM Mono',monospace">${peso(rep.total||0)}</div>`;
         } else {
@@ -2223,8 +2242,9 @@ function openAdd(section,venueId='',date=''){
       <div class="status-sel">
         <div class="sopt" onclick="selStatus('paid')" id="sopt-paid">✅<br>Fully paid</div>
         <div class="sopt" onclick="selStatus('adv')"  id="sopt-adv">💰<br>With advance</div>
-        <div class="sopt" onclick="selStatus('wlk')"  id="sopt-wlk">🚶<br>Walk-in</div>
+        <div class="sopt" onclick="selStatus('otw')"  id="sopt-otw">🚗<br>On the way<div style="font-size:9px;font-weight:500;opacity:.8">(No advance)</div></div>
         <div class="sopt" onclick="selStatus('gcash')" id="sopt-gcash">📱<br>GCash</div>
+        <div class="sopt" onclick="selStatus('wlk')"  id="sopt-wlk">🚶<br>Walk-in</div>
       </div>
       <input type="hidden" id="f-status" value="wlk">
     </div>
@@ -2371,8 +2391,9 @@ function buildRoomTypeBody(selDate, selCheckout, selectedTypeKey='', prefVenueId
       <div class="status-sel">
         <div class="sopt" onclick="selStatus('paid')" id="sopt-paid">✅<br>Fully paid</div>
         <div class="sopt" onclick="selStatus('adv')"  id="sopt-adv">💰<br>With advance</div>
-        <div class="sopt" onclick="selStatus('wlk')"  id="sopt-wlk">🚶<br>Walk-in</div>
+        <div class="sopt" onclick="selStatus('otw')"  id="sopt-otw">🚗<br>On the way<div style="font-size:9px;font-weight:500;opacity:.8">(No advance)</div></div>
         <div class="sopt" onclick="selStatus('gcash')" id="sopt-gcash">📱<br>GCash</div>
+        <div class="sopt" onclick="selStatus('wlk')"  id="sopt-wlk">🚶<br>Walk-in</div>
       </div>
       <input type="hidden" id="f-status" value="wlk">
     </div>
@@ -2656,8 +2677,9 @@ function openFullVenueBooking(){
       <div class="status-sel">
         <div class="sopt" onclick="selStatus('paid')" id="sopt-paid">✅<br>Fully paid</div>
         <div class="sopt" onclick="selStatus('adv')"  id="sopt-adv">💰<br>With advance</div>
-        <div class="sopt" onclick="selStatus('wlk')"  id="sopt-wlk">🚶<br>Walk-in</div>
+        <div class="sopt" onclick="selStatus('otw')"  id="sopt-otw">🚗<br>On the way<div style="font-size:9px;font-weight:500;opacity:.8">(No advance)</div></div>
         <div class="sopt" onclick="selStatus('gcash')" id="sopt-gcash">📱<br>GCash</div>
+        <div class="sopt" onclick="selStatus('wlk')"  id="sopt-wlk">🚶<br>Walk-in</div>
       </div>
       <input type="hidden" id="f-status" value="wlk">
     </div>
@@ -2855,8 +2877,9 @@ function openEdit(id){
       <div class="status-sel">
         <div class="sopt" onclick="selStatus('paid')" id="sopt-paid">✅<br>Fully paid</div>
         <div class="sopt" onclick="selStatus('adv')"  id="sopt-adv">💰<br>With advance</div>
-        <div class="sopt" onclick="selStatus('wlk')"  id="sopt-wlk">🚶<br>Walk-in</div>
+        <div class="sopt" onclick="selStatus('otw')"  id="sopt-otw">🚗<br>On the way<div style="font-size:9px;font-weight:500;opacity:.8">(No advance)</div></div>
         <div class="sopt" onclick="selStatus('gcash')" id="sopt-gcash">📱<br>GCash</div>
+        <div class="sopt" onclick="selStatus('wlk')"  id="sopt-wlk">🚶<br>Walk-in</div>
       </div>
       <input type="hidden" id="f-status" value="${bk.status||'wlk'}">
     </div>
@@ -2946,7 +2969,7 @@ function openEdit(id){
 }
 
 function selStatus(s){
-  ['paid','adv','wlk','gcash'].forEach(x=>{
+  ['paid','adv','otw','wlk','gcash'].forEach(x=>{
     const el=document.getElementById('sopt-'+x);
     if(el) el.className='sopt'+(x===s?' s'+x:'');
   });
@@ -3111,7 +3134,7 @@ function formatMessengerBooking(id){
   const bk = bookings.find(b=>b.id===id);
   if(!bk) return '';
   const venue = ALL_VENUES.find(v=>v.id===bk.venueId);
-  const statusLabel = bk.status==='paid'?'Fully Paid':bk.status==='adv'?'With Advance':bk.status==='gcash'?'GCash Paid':'Walk-in / Unpaid';
+  const statusLabel = bk.status==='paid'?'Fully Paid':bk.status==='adv'?'With Advance':bk.status==='otw'?'🚗 On the way (No advance / Pay on arrival)':bk.status==='gcash'?'GCash Paid':'Walk-in / Unpaid';
   const nights = bk.checkout ? calcNights(bk.date, bk.checkout) : 1;
   const staffName = currentUser ? currentUser.name : 'Staff';
   
@@ -3218,8 +3241,8 @@ function downloadStatement(){
     if(!list.length) return `<tr><td colspan="7" style="text-align:center;color:#999;padding:10px">No bookings</td></tr>`;
     return list.map((bk,i)=>{
       const v=ALL_VENUES.find(x=>x.id===bk.venueId);
-      const sLabel=bk.status==='paid'?'Fully paid':bk.status==='adv'?'With advance':bk.status==='gcash'?'GCash':'Walk-in';
-      const sColor=bk.status==='paid'?'#15803d':bk.status==='adv'?'#b45309':bk.status==='gcash'?'#0070ba':'#1d4ed8';
+      const sLabel=bk.status==='paid'?'Fully paid':bk.status==='adv'?'With advance':bk.status==='otw'?'🚗 On the way (No adv)':bk.status==='gcash'?'GCash':'Walk-in';
+      const sColor=bk.status==='paid'?'#15803d':bk.status==='adv'?'#b45309':bk.status==='otw'?'#c026d3':bk.status==='gcash'?'#0070ba':'#1d4ed8';
       return `<tr style="background:${i%2===0?'#fff':'#f9f8f6'}">
         <td style="padding:7px 10px;font-size:12px">${fmtFull(bk.date)}</td>
         <td style="padding:7px 10px;font-size:12px;font-weight:600">${bk.name}</td>
@@ -3410,6 +3433,7 @@ function printReceipt(id){
     .footer{text-align:center;font-size:11px;color:#a09789;margin-top:20px;border-top:1px dashed #ccc;padding-top:12px}
     .badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#dcfce7;color:#15803d;margin-left:6px}
     ${bk.status==='adv'?'.badge{background:#fef3c7;color:#b45309}':''}
+    ${bk.status==='otw'?'.badge{background:#fdf4ff;color:#a21caf;border:1px solid #f0abfc}':''}
     ${bk.status==='wlk'?'.badge{background:#dbeafe;color:#1d4ed8}':''}
     ${bk.status==='gcash'?'.badge{background:#e0f0ff;color:#0070ba}':''}
     @media print{body{padding:0}}
