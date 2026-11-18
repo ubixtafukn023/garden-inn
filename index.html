@@ -1459,13 +1459,13 @@ function renderSection(sec){
 
 function venuesFor(sec){
   if(sec==='rooms') return ROOMS;
-  if(sec==='cottages') return COTTAGES;
+  if(sec==='cottages'||sec==='cot') return COTTAGES;
   // FH tab: primary venue is FH only (calendar rows), but modal dropdown includes all
   return FH;
 }
 function venuesForModal(sec){
   if(sec==='rooms') return ROOMS;
-  if(sec==='cottages') return COTTAGES;
+  if(sec==='cottages'||sec==='cot') return COTTAGES;
   return ALL_VENUES; // FH modal shows all venue types as dropdown
 }
 function calId(sec){return sec==='rooms'?'rooms-cal':sec==='cot'?'cot-cal':'fh-cal';}
@@ -1707,13 +1707,13 @@ function renderMonth(sec){
 
 function renderRoomRates(){
   const groups=[
-    {label:'Standard 2 pax',img:'assets/photos/Standard Room.png',price:850, note:'4 rooms · max 2 pax each',avail:'4 Units'},
-    {label:'Standard 3 pax',img:'assets/photos/Family Room for 3 pax.png',price:1200,note:'1 room · max 3 pax',avail:'1 Unit'},
-    {label:'Family Room',   img:'assets/photos/Family Room.jpg',price:1700,note:'4 rooms · max 4 pax each',avail:'4 Units'},
-    {label:'Barkadahan',    img:'assets/photos/Barkadahan Room.png',price:3500,note:'1 room · up to 10 pax',avail:'1 Unit'},
+    {key:'std2',  label:'Standard 2 pax',img:'assets/photos/Standard Room.png',price:850, note:'4 rooms · max 2 pax each',avail:'4 Units'},
+    {key:'std3',  label:'Standard 3 pax',img:'assets/photos/Family Room for 3 pax.png',price:1200,note:'1 room · max 3 pax',avail:'1 Unit'},
+    {key:'family',label:'Family Room',   img:'assets/photos/Family Room.jpg',price:1700,note:'4 rooms · max 4 pax each',avail:'4 Units'},
+    {key:'bark',  label:'Barkadahan',    img:'assets/photos/Barkadahan Room.png',price:3500,note:'1 room · up to 10 pax',avail:'1 Unit'},
   ];
   document.getElementById('room-rates').innerHTML=groups.map(g=>`
-    <div class="rcard">
+    <div class="rcard" onclick="openRoomTypeBooking('', '', '', '${g.key}')" style="cursor:pointer">
       <div class="rcard-thumb-wrap">
         <img class="rcard-thumb" src="${g.img}" alt="${g.label}" loading="lazy" onerror="this.style.display='none'">
         <span class="rcard-badge">${g.avail}</span>
@@ -1732,7 +1732,7 @@ function renderCottageRates(){
     'Pine Tree Cottage': 'assets/photos/Pine Tree Cottage.png'
   };
   document.getElementById('cot-rates').innerHTML=COTTAGES.map(c=>`
-    <div class="rcard">
+    <div class="rcard" onclick="openAdd('cottages', '${c.id}')" style="cursor:pointer">
       <div class="rcard-thumb-wrap">
         <img class="rcard-thumb" src="${cotPhotos[c.name]||'assets/photos/Center Cottage.png'}" alt="${c.name}" loading="lazy" onerror="this.style.display='none'">
         <span class="rcard-badge" style="background:#0891b2">Day/Night</span>
@@ -1969,6 +1969,30 @@ function clearConflictError(){
 }
 
 /* ===== DAY POPUP ===== */
+/* ===== REFRESH VENUE DROPDOWN ON DATE CHANGE ===== */
+function refreshVenueDropdown(section){
+  const dateEl = document.getElementById('f-date');
+  const coEl = document.getElementById('f-checkout');
+  const selEl = document.getElementById('f-venue');
+  if(!dateEl || !selEl) return;
+  const isFH = section === 'fh';
+  const curVal = selEl.value;
+  const selDate = dateEl.value || today();
+  const selCheckout = (!isFH && coEl) ? (coEl.value || selDate) : selDate;
+  const vList = venuesForModal(section);
+  const avail = getAvailableVenues(vList, selDate, selCheckout, editingId || null);
+  
+  if(avail.length === 0){
+    selEl.innerHTML = '<option value="">⚠️ All venues booked for this date</option>';
+  } else {
+    selEl.innerHTML = avail.map(v => `<option value="${v.id}"${v.id === curVal ? ' selected' : ''}>${v.icon} ${v.name} — ${peso(v.price)}</option>`).join('');
+    if(!avail.some(v => v.id === curVal)){
+      selEl.value = avail[0].id;
+    }
+  }
+  onVenueChange(section);
+}
+
 let dayPopupSec='rooms', dayPopupDate='';
 function openDayPopup(sec, ds, dayBks){
   dayPopupSec=sec; dayPopupDate=ds;
@@ -2066,7 +2090,7 @@ function openDayPopup(sec, ds, dayBks){
       }
     });
   }
-  document.getElementById('dp-add-btn').onclick=()=>{ closeDayPopup(); openAdd(sec,'',ds); };
+  document.getElementById('dp-add-btn').onclick=()=>{ closeDayPopup(); openAdd(sec==='cot'?'cottages':sec,'',ds); };
   const delDayBtn=document.getElementById('dp-del-day-btn');
   if(dayBks&&dayBks.length>0){
     delDayBtn.style.display='flex';
@@ -2129,7 +2153,7 @@ function openAdd(section,venueId='',date=''){
   const td=today();
   const selDate=date||td;
   const selCheckout=tomorrow(selDate);
-  const isFH=section==='fh';
+  const isFH=section==='fh'; const isCot=(section==='cottages'||section==='cot');
 
   // For rooms: use type-picker instead of individual room dropdown
   if(section==='rooms'){
@@ -2139,7 +2163,7 @@ function openAdd(section,venueId='',date=''){
 
   let venueList=venuesForModal(section);
   const available=getAvailableVenues(venueList, selDate, selCheckout);
-  document.getElementById('modal-title').textContent=isFH?'New Event / Room / Cottage Booking':section==='cottages'?'New Cottage Booking':'New Room Booking';
+  document.getElementById('modal-title').textContent=isFH?'New Event / Room / Cottage Booking':isCot?'New Cottage Booking':'New Room Booking';
 
   let addonsBlock='';
   if(isFH){
@@ -2226,7 +2250,7 @@ function openAdd(section,venueId='',date=''){
     </div>
     <div class="frow">
       <div class="fg">
-        <label>${isFH?'Venue / Room / Cottage':section==='cottages'?'Cottage':'Room'}</label>
+        <label>${isFH?'Venue / Room / Cottage':isCot?'Cottage':'Room'}</label>
         <select id="f-venue" onchange="onVenueChange('${section}');refreshVenueDropdown('${section}')">
           ${available.length===0?`<option value="">⚠️ All venues booked for this date</option>`:
             available.map(v=>`<option value="${v.id}"${v.id===venueId?'selected':''}>${v.icon} ${v.name} — ${peso(v.price)}</option>`).join('')}
@@ -2281,12 +2305,12 @@ function openAdd(section,venueId='',date=''){
 }
 
 /* ===== ROOM TYPE PICKER MODAL ===== */
-function openRoomTypeBooking(prefVenueId='', selDate='', selCheckout=''){
+function openRoomTypeBooking(prefVenueId='', selDate='', selCheckout='', prefTypeKey=''){
   editingId=null;
   if(!selDate) selDate=today();
   if(!selCheckout) selCheckout=tomorrow(selDate);
   document.getElementById('modal-title').textContent='New Room Booking';
-  document.getElementById('modal-body').innerHTML=buildRoomTypeBody(selDate, selCheckout, '', prefVenueId);
+  document.getElementById('modal-body').innerHTML=buildRoomTypeBody(selDate, selCheckout, prefTypeKey, prefVenueId);
   selStatus('wlk'); selBtype('Walk-in');
   calcRoomTypeTotal();
   document.getElementById('modal-foot').innerHTML=`
