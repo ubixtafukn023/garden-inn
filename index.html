@@ -651,7 +651,7 @@ body{
 <!-- LOGIN SCREEN -->
 <div class="login-screen" id="login-screen">
   <div class="login-box">
-    <div class="login-logo">🏨</div>
+    <div class="login-logo" style="margin-bottom:12px"><img src="assets/photos/garden_inn_logo.png" alt="Garden Inn" style="height:72px;max-width:180px;object-fit:contain;filter:drop-shadow(0 2px 8px rgba(0,0,0,0.12))"></div>
     <div class="login-title">Garden Inn</div>
     <div class="login-sub">Garden Inn Scheduler — Sign in to continue</div>
     <div class="user-list" id="user-list"></div>
@@ -684,10 +684,10 @@ body{
 <div class="app">
 
 <div class="header">
-  <div class="logo">
-    <div class="logo-icon">🏨</div>
+  <div class="logo" style="display:flex;align-items:center;gap:10px">
+    <img src="assets/photos/garden_inn_logo.png" alt="Garden Inn" style="height:42px;width:auto;object-fit:contain;border-radius:6px;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.15))">
     <div>
-      <h1>Garden Inn Scheduler</h1>
+      <h1 style="line-height:1.2">Garden Inn Scheduler</h1>
       <small>Rooms · Cottages · Function Hall</small>
     </div>
   </div>
@@ -1405,6 +1405,10 @@ function fmtDisp(d){return d.toLocaleDateString('en-PH',{month:'short',day:'nume
 function fmtFull(ds){const d=new Date(ds+'T00:00');return d.toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'});}
 function fmtMonth(d){return d.toLocaleDateString('en-PH',{month:'long',year:'numeric'});}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2);}
+function calcGcashFee(amt){
+  amt=parseFloat(amt||0)||0;
+  return amt > 0 ? Math.ceil(amt / 500) * 10 : 0;
+}
 function peso(n){return '₱'+Number(n||0).toLocaleString();}
 
 function save(){
@@ -2372,6 +2376,7 @@ function openAdd(section,venueId='',date=''){
         <div class="deposit-bar-bg"><div class="deposit-bar-fill" id="gcash-amount-fill" style="width:0%;background:var(--gcash)"></div></div>
         <div class="deposit-labels"><span id="gcash-amount-paid-lbl"></span><span id="gcash-amount-bal-lbl"></span></div>
       </div>
+      <div class="gcash-fee-note" style="margin-top:6px;font-size:11px;color:var(--gcash);font-weight:600;display:none"></div>
     </div>
     <div class="fg">
       <label>Booking type</label>
@@ -2610,6 +2615,7 @@ function buildRoomTypeBody(selDate, selCheckout){
         <div class="deposit-bar-bg"><div class="deposit-bar-fill" id="gcash-amount-fill" style="width:0%;background:var(--gcash)"></div></div>
         <div class="deposit-labels"><span id="gcash-amount-paid-lbl"></span><span id="gcash-amount-bal-lbl"></span></div>
       </div>
+      <div class="gcash-fee-note" style="margin-top:6px;font-size:11px;color:var(--gcash);font-weight:600;display:none"></div>
     </div>
     <div class="fg">
       <label>Booking type</label>
@@ -2967,6 +2973,7 @@ function openFullVenueBooking(){
         <div class="deposit-bar-bg"><div class="deposit-bar-fill" id="gcash-amount-fill" style="width:0%;background:var(--gcash)"></div></div>
         <div class="deposit-labels"><span id="gcash-amount-paid-lbl"></span><span id="gcash-amount-bal-lbl"></span></div>
       </div>
+      <div class="gcash-fee-note" style="margin-top:6px;font-size:11px;color:var(--gcash);font-weight:600;display:none"></div>
     </div>
     <div class="frow">
       <div class="fg">
@@ -3190,6 +3197,7 @@ function openEdit(id){
         <div class="deposit-bar-bg"><div class="deposit-bar-fill" id="gcash-amount-fill" style="width:0%;background:var(--gcash)"></div></div>
         <div class="deposit-labels"><span id="gcash-amount-paid-lbl"></span><span id="gcash-amount-bal-lbl"></span></div>
       </div>
+      <div class="gcash-fee-note" style="margin-top:6px;font-size:11px;color:var(--gcash);font-weight:600;display:none"></div>
     </div>
     <div class="fg">
       <label>Booking type</label>
@@ -3313,6 +3321,16 @@ function updateGcashAmountPreview(){
   const total=ps?parseFloat(ps.dataset.total||0):0;
   const amt=parseFloat(ga?.value||0)||0;
   const preview=document.getElementById('gcash-amount-preview');
+  const fee = calcGcashFee(amt);
+  const feeNotes = document.querySelectorAll('.gcash-fee-note');
+  feeNotes.forEach(el => {
+    if(amt > 0){
+      el.style.display = 'block';
+      el.innerHTML = '💸 <b>GCash Cash-out Fee:</b> ' + peso(fee) + ' <span style="opacity:0.8">(₱10 per ₱500)</span>';
+    } else {
+      el.style.display = 'none';
+    }
+  });
   if(!preview) return;
   if(amt>0&&total>0){
     const bal=Math.max(0,total-amt);
@@ -3322,7 +3340,7 @@ function updateGcashAmountPreview(){
     if(fill) fill.style.width=pct+'%';
     const pl=document.getElementById('gcash-amount-paid-lbl');
     const bl=document.getElementById('gcash-amount-bal-lbl');
-    if(pl) pl.textContent='GCash paid: '+peso(amt);
+    if(pl) pl.textContent='GCash paid: '+peso(amt)+(fee>0?' (+'+peso(fee)+' fee)':'');
     if(bl) bl.textContent='Balance: '+peso(bal);
   } else {
     preview.style.display='none';
@@ -3439,14 +3457,20 @@ function formatMessengerBooking(id){
   if(!bk) return '';
   const venue = ALL_VENUES.find(v=>v.id===bk.venueId);
   // Detect if this booking is part of a multi-room group for the same client
-  let venueDisplay = venue ? (venue.icon + ' ' + venue.name) : 'Venue';
   const groupBookings = bookings.filter(b => (b.linkedGroupId && b.linkedGroupId === (bk.linkedGroupId || bk.id)) || (b.name.trim().toLowerCase() === bk.name.trim().toLowerCase() && b.date === bk.date && b.checkout === bk.checkout));
+  let venueDisplay = 'Venue';
   if(groupBookings.length > 1){
-    const vNames = groupBookings.map(b => {
-      const vv = ALL_VENUES.find(x => x.id === b.venueId);
-      return vv ? (vv.icon + ' ' + vv.name) : b.venueId;
+    const typeCounts = {};
+    groupBookings.forEach(b => {
+      const gv = ALL_VENUES.find(x => x.id === b.venueId);
+      if (gv) {
+        let tName = gv.kind === 'room' ? (gv.type.includes('Room') ? gv.type : gv.type + ' Room') : gv.name;
+        typeCounts[tName] = (typeCounts[tName] || 0) + 1;
+      }
     });
-    venueDisplay = vNames.join(' + ');
+    venueDisplay = Object.entries(typeCounts).map(([t, cnt]) => cnt > 1 ? `${cnt}× ${t}` : t).join(' + ');
+  } else if(venue){
+    venueDisplay = venue.kind === 'room' ? (venue.type.includes('Room') ? venue.type : venue.type + ' Room') : (venue.icon + ' ' + venue.name);
   }
   const statusLabel = bk.status==='paid'?'Fully Paid':bk.status==='adv'?'With Advance':bk.status==='otw'?'🚗 On the way (No advance / Pay on arrival)':bk.status==='gcash'?'GCash Paid':'Walk-in / Unpaid';
   const nights = bk.checkout ? calcNights(bk.date, bk.checkout) : 1;
@@ -3726,15 +3750,46 @@ function printReceipt(id){
   const bk=bookings.find(b=>b.id===id);
   if(!bk) return;
   const v=ALL_VENUES.find(x=>x.id===bk.venueId);
+
+  // Group booking detection (multi-room)
+  const groupBookings = bookings.filter(b => (b.linkedGroupId && b.linkedGroupId === (bk.linkedGroupId || bk.id)) || (b.name.trim().toLowerCase() === bk.name.trim().toLowerCase() && b.date === bk.date && b.checkout === bk.checkout));
+
+  // Determine venue category display without specific room numbers
+  let venueLabel = '—';
+  if (groupBookings.length > 1) {
+    const typeCounts = {};
+    groupBookings.forEach(b => {
+      const gv = ALL_VENUES.find(x => x.id === b.venueId);
+      if (gv) {
+        let tName = gv.kind === 'room' ? (gv.type.includes('Room') ? gv.type : gv.type + ' Room') : gv.name;
+        typeCounts[tName] = (typeCounts[tName] || 0) + 1;
+      }
+    });
+    venueLabel = Object.entries(typeCounts).map(([t, cnt]) => cnt > 1 ? `${cnt}× ${t}` : t).join(' + ');
+  } else if (v) {
+    if (v.kind === 'room') {
+      // Show room category e.g. "Standard Room", "Family Room", "Barkadahan Room"
+      venueLabel = v.type ? (v.type.includes('Room') ? v.type : v.type + ' Room') : 'Standard Room';
+    } else {
+      venueLabel = v.name;
+    }
+  }
+
+  // Calculate GCash fee if applicable
+  const isGcash = bk.status === 'gcash';
+  const gcashPaid = bk.gcashamount || 0;
+  const gcashFee = isGcash ? calcGcashFee(gcashPaid > 0 ? gcashPaid : (bk.total || 0)) : (bk.gcashFee || 0);
+
   const bal=Math.max(0,(bk.total||0)-(bk.deposit||0));
-  const statusMap={paid:'✅ Fully Paid',adv:'💰 With Advance',wlk:'🚶 Walk-in',gcash:'📱 GCash'};
+  const statusMap={paid:'✅ Fully Paid',adv:'💰 With Advance',otw:'🚗 On the way (Pay on arrival)',wlk:'🚶 Walk-in',gcash:'📱 GCash'};
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Receipt — ${bk.name}</title>
   <style>
     body{font-family:'Segoe UI',sans-serif;max-width:360px;margin:0 auto;padding:24px;color:#1a1814;font-size:14px}
-    .logo{text-align:center;margin-bottom:16px}
-    .logo h1{font-size:22px;font-weight:800;margin:0}
-    .logo p{font-size:12px;color:#6b6455;margin:4px 0 0}
-    h2{font-size:14px;font-weight:700;text-align:center;border-top:2px dashed #ccc;border-bottom:2px dashed #ccc;padding:8px 0;margin:12px 0}
+    .logo{text-align:center;margin-bottom:14px}
+    .logo img{height:58px;max-width:180px;object-fit:contain;margin-bottom:4px}
+    .logo h1{font-size:20px;font-weight:800;margin:0;letter-spacing:-0.3px}
+    .logo p{font-size:11px;color:#6b6455;margin:3px 0 0;text-transform:uppercase;letter-spacing:0.5px}
+    h2{font-size:13px;font-weight:700;text-align:center;border-top:2px dashed #ccc;border-bottom:2px dashed #ccc;padding:8px 0;margin:12px 0;letter-spacing:0.5px}
     .row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0ede8}
     .row .lbl{color:#6b6455;font-size:13px}
     .row .val{font-weight:600;font-size:13px;text-align:right}
@@ -3752,18 +3807,24 @@ function printReceipt(id){
     ${bk.status==='gcash'?'.badge{background:#e0f0ff;color:#0070ba}':''}
     @media print{body{padding:0}}
   </style></head><body>
-  <div class="logo"><h1>🌿 Garden Inn</h1><p>Booking Receipt</p></div>
+  <div class="logo">
+    <img src="assets/photos/garden_inn_logo.png" alt="Garden Inn Logo">
+    <h1>Garden Inn</h1>
+    <p>Booking Receipt</p>
+  </div>
   <h2>BOOKING CONFIRMATION</h2>
   <div class="row"><span class="lbl">Guest / Group</span><span class="val">${bk.name}</span></div>
   ${bk.contact?`<div class="row"><span class="lbl">Contact</span><span class="val">${bk.contact}</span></div>`:''}
-  <div class="row"><span class="lbl">Venue</span><span class="val">${v?v.icon+' '+v.name:'—'}</span></div>
+  <div class="row"><span class="lbl">Venue</span><span class="val">${venueLabel}</span></div>
   <div class="row"><span class="lbl">Check-in</span><span class="val">${fmtFull(bk.date)}</span></div>
   ${bk.checkout&&bk.checkout!==bk.date?`<div class="row"><span class="lbl">Check-out</span><span class="val">${fmtFull(bk.checkout)}</span></div>`:''}
   ${bk.pax?`<div class="row"><span class="lbl">Pax</span><span class="val">${bk.pax} person(s)</span></div>`:''}
-  ${bk.extbed?`<div class="row"><span class="lbl">Extra bed</span><span class="val">${bk.extbed} × ₱350</span></div>`:''}
+  ${bk.extbed?`<div class="row"><span class="lbl">Extra bed</span><span class="val">${bk.extbed} × ₱250</span></div>`:''}
   ${bk.fhHours?`<div class="row"><span class="lbl">Duration</span><span class="val">${bk.fhHours} hours</span></div>`:''}
   ${bk.gcashRef?`<div class="row"><span class="lbl">GCash Ref #</span><span class="val" style="font-family:monospace">${bk.gcashRef}</span></div>`:''}
   <div class="row"><span class="lbl">Payment Status</span><span class="val">${statusMap[bk.status]||'Walk-in'}</span></div>
+  ${isGcash && gcashPaid > 0 ? `<div class="row"><span class="lbl">GCash Amount</span><span class="val">${peso(gcashPaid)}</span></div>` : ''}
+  ${isGcash && gcashFee > 0 ? `<div class="row" style="color:#0070ba"><span class="lbl" style="color:#0070ba">GCash Fee (₱10/₱500)</span><span class="val">+${peso(gcashFee)}</span></div>` : ''}
   <div class="total-row"><span class="lbl">Total</span><span class="val">${peso(bk.total||0)}</span></div>
   ${bk.deposit?`<div class="balance"><span class="lbl">Deposit paid</span><span class="val">${peso(bk.deposit)}</span></div>
   <div class="balance" style="background:#fee2e2"><span class="lbl">Balance due</span><span class="val" style="color:#dc2626">${peso(bal)}</span></div>`:''}
