@@ -2401,10 +2401,17 @@ function openAdd(section,venueId='',date=''){
         <input type="date" id="f-date" value="${selDate}" oninput="refreshVenueDropdown('${section}')">
       </div>
       <div class="fg" id="checkout-wrap">
-        <label>Check-out date</label>
+        <label>Check-out date <span id="days-badge-${section}" style="font-size:11px;color:var(--adv);font-weight:700;background:var(--adv-bg);border:1px solid var(--adv-bd);border-radius:20px;padding:1px 8px;margin-left:4px">${calcNights(selDate, selCheckout)} night${calcNights(selDate, selCheckout)>1?'s':''}</span></label>
         <input type="date" id="f-checkout" value="${selCheckout}" oninput="refreshVenueDropdown('${section}');calcTotal('${section}')">
       </div>
     </div>
+    ${!isFH ? `
+    <div class="fg" style="margin-top:-6px;margin-bottom:14px">
+      <label style="font-size:11px;color:var(--text2);margin-bottom:2px">⚡ Quick Select Length of Stay:</label>
+      <div class="days-preset-bar">
+        ${[1, 2, 3, 4, 5, 7].map(n => `<button type="button" class="days-preset-btn${calcNights(selDate, selCheckout)===n?' active':''}" onclick="setNightsPreset(${n}, '${section}')">${n} ${n===1?'night':'nights'}</button>`).join('')}
+      </div>
+    </div>` : ''}
     ${addonsBlock}
     <div class="price-box" id="price-box"></div>
     ${!isFH?`
@@ -2448,20 +2455,26 @@ function addDaysToDate(baseDate, days){
 }
 
 function setNightsPreset(n, section='rooms'){
-  const dateInputId = (section==='rooms'||section==='fv') ? 'f-date' : 'f-date';
-  const checkoutInputId = (section==='rooms'||section==='fv') ? 'f-checkout' : 'f-checkout';
-  const dateEl = document.getElementById(dateInputId);
-  const checkoutEl = document.getElementById(checkoutInputId);
+  const dateEl = document.getElementById('f-date');
+  const checkoutEl = document.getElementById('f-checkout');
   if(!dateEl || !checkoutEl) return;
   const inDate = dateEl.value || today();
   const outDate = addDaysToDate(inDate, n);
   checkoutEl.value = outDate;
+
   if(section==='rooms'){
     onRoomTypeDateChange();
   } else if(section==='fv'){
     calcFullVenueTotal();
   } else {
-    refreshVenueDropdown(section);
+    const nights = calcNights(inDate, outDate);
+    const badge = document.getElementById('days-badge-' + section) || document.getElementById('days-badge-edit');
+    if(badge) badge.textContent = nights + ' night' + (nights > 1 ? 's' : '');
+    document.querySelectorAll('.days-preset-btn').forEach(b => {
+      const btnN = parseInt(b.textContent.trim(), 10);
+      b.classList.toggle('active', btnN === nights);
+    });
+    if(typeof refreshVenueDropdown === 'function') refreshVenueDropdown(section);
     calcTotal(section);
   }
 }
@@ -3083,7 +3096,30 @@ function saveFullVenueBooking(){
   alert(`✅ Full Venue booked for ${name}!\n${ROOMS.length} rooms × ${nights} night${nights>1?'s':''} = ${peso(total)}`);
 }
 
+
+/* ===== ADD ANOTHER ROOM FOR AN EXISTING CLIENT WHEN UPDATING ===== */
+function addRoomForClient(bookingId){
+  const bk = bookings.find(b => b.id === bookingId);
+  if(!bk) return;
+  closeModal();
+  setTimeout(() => {
+    openRoomTypeBooking('', bk.date, bk.checkout || tomorrow(bk.date), 'std2');
+    setTimeout(() => {
+      const fn = document.getElementById('f-name');
+      const fc = document.getElementById('f-contact');
+      const fa = document.getElementById('f-address');
+      const fst = document.getElementById('f-status');
+      if(fn) fn.value = bk.name;
+      if(fc) fc.value = bk.contact || '';
+      if(fa) fa.value = bk.address || '';
+      if(fst) selStatus(bk.status || 'wlk');
+      showToast(`➕ Adding room for ${bk.name}`, '#6d28d9');
+    }, 60);
+  }, 100);
+}
+
 function openEdit(id){
+
   const bk=bookings.find(b=>b.id===id);
   if(!bk) return;
   editingId=id;
@@ -3176,10 +3212,17 @@ function openEdit(id){
     <div class="frow">
       <div class="fg">
         <label>${isFH?'Event date':'Check-in date'}</label>
-        <input type="date" id="f-date" value="${bk.date}">
+        <input type="date" id="f-date" value="${bk.date}" oninput="const co=document.getElementById('f-checkout');if(co){const n=calcNights(this.value,co.value);const b=document.getElementById('days-badge-edit');if(b)b.textContent=n+' night'+(n>1?'s':'');}calcTotal('${section}')">
       </div>
-      ${!isFH?`<div class="fg"><label>Check-out date</label><input type="date" id="f-checkout" value="${bk.checkout||bk.date}" oninput="calcTotal('${section}')"></div>`:''}
+      ${!isFH?`<div class="fg"><label>Check-out date <span id="days-badge-edit" style="font-size:11px;color:var(--adv);font-weight:700;background:var(--adv-bg);border:1px solid var(--adv-bd);border-radius:20px;padding:1px 8px;margin-left:4px">${calcNights(bk.date, bk.checkout||bk.date)} night${calcNights(bk.date, bk.checkout||bk.date)>1?'s':''}</span></label><input type="date" id="f-checkout" value="${bk.checkout||bk.date}" oninput="const ci=document.getElementById('f-date');if(ci){const n=calcNights(ci.value,this.value);const b=document.getElementById('days-badge-edit');if(b)b.textContent=n+' night'+(n>1?'s':'');}calcTotal('${section}')"></div>`:''}
     </div>
+    ${!isFH ? `
+    <div class="fg" style="margin-top:-6px;margin-bottom:14px">
+      <label style="font-size:11px;color:var(--text2);margin-bottom:2px">⚡ Quick Select Length of Stay:</label>
+      <div class="days-preset-bar">
+        ${[1, 2, 3, 4, 5, 7].map(n => `<button type="button" class="days-preset-btn${calcNights(bk.date, bk.checkout||bk.date)===n?' active':''}" onclick="setNightsPreset(${n}, '${section}')">${n} ${n===1?'night':'nights'}</button>`).join('')}
+      </div>
+    </div>` : ''}
     ${addonsBlock}
     <div class="price-box" id="price-box"></div>
     ${!isFH?`
@@ -3220,6 +3263,7 @@ function openEdit(id){
   setTimeout(()=>updateDepositPreview(),50);
   document.getElementById('modal-foot').innerHTML=`
     <button class="btn-d" onclick="openDelScreen('${id}')">🗑 Delete</button>
+    <button type="button" class="btn-s" onclick="addRoomForClient('${id}')" style="background:#f5f3ff;border-color:#ddd6fe;color:#6d28d9;font-weight:700" title="Add another room for this guest">＋ Add Room for Client</button>
     <div style="flex:1"></div>
     <button class="messenger-btn" onclick="shareToMessenger('${id}')" title="Send to Messenger">💬 Messenger</button>
     <button class="receipt-btn" onclick="printReceipt('${id}')">🖨️ Receipt</button>
