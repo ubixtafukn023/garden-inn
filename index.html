@@ -343,6 +343,39 @@ body{
 .bopt{padding:7px 6px;border:1.5px solid var(--border);border-radius:var(--r);text-align:center;font-size:12px;cursor:pointer;color:var(--text2);transition:all .15s;font-weight:500}
 .bopt:hover{border-color:var(--border2);color:var(--text)}
 .bopt.sel{border-color:var(--text);background:var(--surface2);color:var(--text)}
+
+/* MULTI-ROOM PICKER & DAY STEPPER STYLES */
+.room-qty-card{
+  background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);
+  padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;
+  transition:all .15s ease;margin-bottom:8px;
+}
+.room-qty-card:hover{border-color:var(--border2);background:var(--surface2)}
+.room-qty-card.has-selected{border-color:var(--text);background:#faf8f3;box-shadow:0 2px 8px rgba(0,0,0,0.05)}
+.room-qty-info{flex:1;min-width:0}
+.room-qty-title{font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px}
+.room-qty-sub{font-size:11px;color:var(--text2);margin-top:2px}
+.room-qty-badge{font-size:10px;font-weight:700;border-radius:20px;padding:1px 7px;display:inline-block;margin-left:4px}
+.room-stepper{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.room-step-btn{
+  width:32px;height:32px;border-radius:8px;border:1px solid var(--border2);
+  background:var(--surface);color:var(--text);font-size:16px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  transition:all .12s ease;user-select:none;
+}
+.room-step-btn:hover:not(:disabled){background:var(--text);color:#fff;border-color:var(--text);transform:scale(1.05)}
+.room-step-btn:disabled{opacity:.35;cursor:not-allowed}
+.room-step-val{min-width:28px;text-align:center;font-size:15px;font-weight:800;font-family:'DM Mono',monospace;color:var(--text)}
+
+.days-preset-bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px}
+.days-preset-btn{
+  padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;
+  border:1.5px solid var(--border2);background:var(--surface);color:var(--text);
+  cursor:pointer;transition:all .15s ease;display:inline-flex;align-items:center;gap:4px;
+}
+.days-preset-btn:hover{background:var(--surface2);border-color:var(--text2)}
+.days-preset-btn.active{background:var(--text);color:#fff;border-color:var(--text);box-shadow:0 2px 6px rgba(0,0,0,0.15)}
+
 .addons-box{background:var(--surface2);border-radius:var(--r);padding:.875rem;margin-bottom:12px;border:1px solid var(--border)}
 .addons-title{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem}
 .ao-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:13px}
@@ -2404,14 +2437,112 @@ function openAdd(section,venueId='',date=''){
   setTimeout(()=>{const n=document.getElementById('f-name');if(n)n.focus();},60);
 }
 
-/* ===== ROOM TYPE PICKER MODAL ===== */
+
+/* ===== MULTI-ROOM SELECTION & DAY PRESETS STATE ===== */
+let selectedRoomCounts = { std2: 0, std3: 0, family: 0, bark: 0 };
+
+function addDaysToDate(baseDate, days){
+  const d = new Date(baseDate + 'T12:00:00');
+  d.setDate(d.getDate() + parseInt(days, 10));
+  return fmt(d);
+}
+
+function setNightsPreset(n, section='rooms'){
+  const dateInputId = (section==='rooms'||section==='fv') ? 'f-date' : 'f-date';
+  const checkoutInputId = (section==='rooms'||section==='fv') ? 'f-checkout' : 'f-checkout';
+  const dateEl = document.getElementById(dateInputId);
+  const checkoutEl = document.getElementById(checkoutInputId);
+  if(!dateEl || !checkoutEl) return;
+  const inDate = dateEl.value || today();
+  const outDate = addDaysToDate(inDate, n);
+  checkoutEl.value = outDate;
+  if(section==='rooms'){
+    onRoomTypeDateChange();
+  } else if(section==='fv'){
+    calcFullVenueTotal();
+  } else {
+    refreshVenueDropdown(section);
+    calcTotal(section);
+  }
+}
+
+function changeRoomQty(typeKey, delta){
+  const checkin = document.getElementById('f-date')?.value || today();
+  const checkout = document.getElementById('f-checkout')?.value || tomorrow(checkin);
+  const avail = countAvailableByType(typeKey, checkin, checkout);
+  
+  const current = selectedRoomCounts[typeKey] || 0;
+  let next = current + delta;
+  if(next < 0) next = 0;
+  if(next > avail){
+    const rt = ROOM_TYPES.find(x => x.key === typeKey);
+    showToast(`⚠️ Only ${avail} ${rt?rt.label:'room'}(s) available for selected dates.`, '#b45309');
+    return;
+  }
+  selectedRoomCounts[typeKey] = next;
+  updateRoomQtyUI(checkin, checkout);
+  calcRoomTypeTotal();
+}
+
+function updateRoomQtyUI(checkin, checkout){
+  if(!checkin) checkin = document.getElementById('f-date')?.value || today();
+  if(!checkout) checkout = document.getElementById('f-checkout')?.value || tomorrow(checkin);
+  const wrap = document.getElementById('room-qty-list');
+  if(!wrap) return;
+
+  wrap.innerHTML = ROOM_TYPES.map(rt => {
+    const avail = countAvailableByType(rt.key, checkin, checkout);
+    const qty = Math.min(selectedRoomCounts[rt.key] || 0, avail);
+    selectedRoomCounts[rt.key] = qty;
+    const isSelected = qty > 0;
+    const isFull = avail === 0;
+
+    let badge = '';
+    if(isFull) {
+      badge = '<span class="room-qty-badge" style="background:#fee2e2;color:#dc2626">FULL</span>';
+    } else {
+      badge = `<span class="room-qty-badge" style="background:var(--paid-bg);color:var(--paid)">${avail}/${rt.count} free</span>`;
+    }
+
+    return `
+      <div class="room-qty-card${isSelected?' has-selected':''}">
+        <div class="room-qty-info">
+          <div class="room-qty-title">
+            <span>${rt.icon} ${rt.label}</span>
+            ${badge}
+          </div>
+          <div class="room-qty-sub">${peso(rt.price)}/night · max ${rt.cap} pax each</div>
+        </div>
+        <div class="room-stepper">
+          <button type="button" class="room-step-btn" onclick="changeRoomQty('${rt.key}', -1)" ${qty<=0?'disabled':''}>−</button>
+          <div class="room-step-val" id="rqty-val-${rt.key}">${qty}</div>
+          <button type="button" class="room-step-btn" onclick="changeRoomQty('${rt.key}', 1)" ${(isFull||qty>=avail)?'disabled':''}>＋</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+
+/* ===== ROOM TYPE PICKER MODAL (MULTI-ROOM + DAY PRESET SELECTOR) ===== */
 function openRoomTypeBooking(prefVenueId='', selDate='', selCheckout='', prefTypeKey=''){
   editingId=null;
   if(!selDate) selDate=today();
   if(!selCheckout) selCheckout=tomorrow(selDate);
+
+  // Initialize selectedRoomCounts: if prefTypeKey or prefVenueId passed, default to 1 room of that type
+  selectedRoomCounts = { std2: 0, std3: 0, family: 0, bark: 0 };
+  let initKey = prefTypeKey;
+  if(!initKey && prefVenueId){
+    const r = ROOMS.find(x => x.id === prefVenueId);
+    if(r) initKey = r.typeKey;
+  }
+  if(!initKey) initKey = 'std2'; // default first
+  selectedRoomCounts[initKey] = 1;
+
   document.getElementById('modal-title').textContent='New Room Booking';
-  document.getElementById('modal-body').innerHTML=buildRoomTypeBody(selDate, selCheckout, prefTypeKey, prefVenueId);
+  document.getElementById('modal-body').innerHTML=buildRoomTypeBody(selDate, selCheckout);
   selStatus('wlk'); selBtype('Walk-in');
+  updateRoomQtyUI(selDate, selCheckout);
   calcRoomTypeTotal();
   document.getElementById('modal-foot').innerHTML=`
     <button class="btn-s" onclick="closeModal()">Cancel</button>
@@ -2421,35 +2552,13 @@ function openRoomTypeBooking(prefVenueId='', selDate='', selCheckout='', prefTyp
   setTimeout(()=>{const n=document.getElementById('f-name');if(n)n.focus();},60);
 }
 
-function buildRoomTypeBody(selDate, selCheckout, selectedTypeKey='', prefVenueId=''){
-  // Determine preselected type from venueId
-  if(!selectedTypeKey && prefVenueId){
-    const r=ROOMS.find(x=>x.id===prefVenueId);
-    if(r) selectedTypeKey=r.typeKey;
-  }
-  const nights=calcNights(selDate, selCheckout);
-  const typeSel = ROOM_TYPES.map(rt=>{
-    const avail=countAvailableByType(rt.key, selDate, selCheckout);
-    const total=rt.count;
-    const booked=total-avail;
-    const isFull=avail===0;
-    const isSel=selectedTypeKey===rt.key;
-    let countChip='';
-    if(isFull) countChip=`<span style="background:#fee2e2;color:#dc2626;border-radius:20px;padding:2px 7px;font-size:10px;font-weight:700">FULL</span>`;
-    else countChip=`<span style="background:var(--paid-bg);color:var(--paid);border-radius:20px;padding:2px 7px;font-size:10px;font-weight:700">${avail}/${total} free</span>`;
-    return `<div class="bopt${isSel?' sel':''}${isFull?' disabled-opt':''}" 
-      onclick="${isFull?`showRoomFullError('${rt.label}')`:`selRoomType('${rt.key}')`}" 
-      id="rtype-${rt.key}"
-      style="display:flex;flex-direction:column;gap:3px;align-items:center;padding:10px 6px;${isFull?'opacity:.55;cursor:not-allowed;background:#fef2f2;border-color:#fca5a5':''}">
-      <span style="font-size:18px">${rt.icon}</span>
-      <span style="font-size:12px;font-weight:700;color:var(--text)">${rt.label}</span>
-      <span style="font-size:10px;color:var(--text2)">${peso(rt.price)}/night · max ${rt.cap} pax</span>
-      ${countChip}
-    </div>`;
-  }).join('');
-
-  const selType=selectedTypeKey?ROOM_TYPES.find(x=>x.key===selectedTypeKey):null;
-  const nightsLabel=nights>1?`<span style="font-size:12px;color:var(--adv);font-weight:700;background:var(--adv-bg);border:1px solid var(--adv-bd);border-radius:20px;padding:2px 10px">${nights} night${nights>1?'s':''}</span>`:'';
+function buildRoomTypeBody(selDate, selCheckout){
+  const nights = calcNights(selDate, selCheckout);
+  const presetDays = [1, 2, 3, 4, 5, 7];
+  const presetsHtml = presetDays.map(n => `
+    <button type="button" class="days-preset-btn${nights===n?' active':''}" onclick="setNightsPreset(${n}, 'rooms')">
+      ${n} ${n===1?'night':'nights'}
+    </button>`).join('');
 
   return `
     <div class="fg">
@@ -2497,27 +2606,38 @@ function buildRoomTypeBody(selDate, selCheckout, selectedTypeKey='', prefVenueId
       </div>
       <input type="hidden" id="f-btype" value="Walk-in">
     </div>
-    <div class="fg">
-      <label>Room type</label>
-      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px" id="room-type-sel">
-        ${typeSel}
-      </div>
-      <input type="hidden" id="f-room-typekey" value="${selectedTypeKey||''}">
-      <div id="room-type-err" style="display:none;background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600;margin-top:6px"></div>
-    </div>
+
+    <!-- DATES & DAY PRESET SELECTOR -->
     <div class="frow">
       <div class="fg">
         <label>Check-in date</label>
         <input type="date" id="f-date" value="${selDate}" oninput="onRoomTypeDateChange()">
       </div>
       <div class="fg">
-        <label>Check-out date ${nightsLabel}</label>
+        <label>Check-out date <span id="nights-badge" style="font-size:11px;color:var(--adv);font-weight:700;background:var(--adv-bg);border:1px solid var(--adv-bd);border-radius:20px;padding:1px 8px;margin-left:4px">${nights} night${nights>1?'s':''}</span></label>
         <input type="date" id="f-checkout" value="${selCheckout}" oninput="onRoomTypeDateChange()">
       </div>
     </div>
+    <div class="fg" style="margin-top:-6px;margin-bottom:14px">
+      <label style="font-size:11px;color:var(--text2);margin-bottom:2px">⚡ Quick Select Length of Stay:</label>
+      <div class="days-preset-bar" id="days-preset-bar">
+        ${presetsHtml}
+      </div>
+    </div>
+
+    <!-- SELECT ROOMS (WITH PLUS / MINUS QUANTITY STEPPER) -->
     <div class="fg">
-      <label>Number of pax</label>
-      <input type="number" id="f-pax" min="1" max="100" placeholder="e.g. 2">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <label style="margin-bottom:0">Select Room(s) to Book</label>
+        <span style="font-size:11px;color:var(--text3);font-weight:600">Use ＋ to add multiple rooms</span>
+      </div>
+      <div id="room-qty-list"></div>
+      <div id="room-type-err" style="display:none;background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600;margin-top:6px"></div>
+    </div>
+
+    <div class="fg">
+      <label>Number of pax <span style="font-size:10px;color:var(--text3)">(Total guests)</span></label>
+      <input type="number" id="f-pax" min="1" max="100" placeholder="e.g. 4">
     </div>
     <div class="addons-box">
       <div class="addons-title">➕ Add-ons</div>
@@ -2557,66 +2677,31 @@ function buildRoomTypeBody(selDate, selCheckout, selectedTypeKey='', prefVenueId
     </div>
     <div class="fg">
       <label>Notes</label>
-      <textarea id="f-note" placeholder="Special requests, notes..."></textarea>
+      <textarea id="f-note" placeholder="Special requests, room assignment notes..."></textarea>
     </div>`;
 }
 
-function selRoomType(typeKey){
-  document.querySelectorAll('#room-type-sel .bopt').forEach(el=>el.classList.remove('sel'));
-  const el=document.getElementById('rtype-'+typeKey);
-  if(el) el.classList.add('sel');
-  const fi=document.getElementById('f-room-typekey');
-  if(fi) fi.value=typeKey;
-  document.getElementById('room-type-err').style.display='none';
-  calcRoomTypeTotal();
-}
-function showRoomFullError(label){
-  const err=document.getElementById('room-type-err');
-  if(err){err.style.display='block';err.textContent=`⛔ No ${label} rooms available for the selected dates. All ${label} rooms are fully booked.`;}
-}
 function onRoomTypeDateChange(){
   const checkin=document.getElementById('f-date')?.value||today();
   const checkout=document.getElementById('f-checkout')?.value||tomorrow(checkin);
-  const typeKey=document.getElementById('f-room-typekey')?.value||'';
-  // Rebuild type selector with updated availability
-  const sel=document.getElementById('room-type-sel');
-  if(!sel) return;
   const nights=calcNights(checkin, checkout);
-  // Update nights badge next to checkout label
-  const coLabel=document.querySelector('[for="f-checkout"], label');
-  sel.innerHTML=ROOM_TYPES.map(rt=>{
-    const avail=countAvailableByType(rt.key, checkin, checkout);
-    const total=rt.count;
-    const isFull=avail===0;
-    const isSel=typeKey===rt.key;
-    let countChip=isFull
-      ?`<span style="background:#fee2e2;color:#dc2626;border-radius:20px;padding:2px 7px;font-size:10px;font-weight:700">FULL</span>`
-      :`<span style="background:var(--paid-bg);color:var(--paid);border-radius:20px;padding:2px 7px;font-size:10px;font-weight:700">${avail}/${total} free</span>`;
-    return `<div class="bopt${isSel?' sel':''}${isFull?' disabled-opt':''}" 
-      onclick="${isFull?`showRoomFullError('${rt.label}')`:`selRoomType('${rt.key}')`}" 
-      id="rtype-${rt.key}"
-      style="display:flex;flex-direction:column;gap:3px;align-items:center;padding:10px 6px;${isFull?'opacity:.55;cursor:not-allowed;background:#fef2f2;border-color:#fca5a5':''}">
-      <span style="font-size:18px">${rt.icon}</span>
-      <span style="font-size:12px;font-weight:700;color:var(--text)">${rt.label}</span>
-      <span style="font-size:10px;color:var(--text2)">${peso(rt.price)}/night · max ${rt.cap} pax</span>
-      ${countChip}
-    </div>`;
-  }).join('');
-  // Update nights label
-  const coLblEl=document.querySelector('#f-checkout')?.previousElementSibling?.querySelector('label')||document.querySelector('label[for="f-checkout"]');
-  if(nights>1){
-    let badge=document.getElementById('nights-badge');
-    if(!badge){badge=document.createElement('span');badge.id='nights-badge';badge.style.cssText='font-size:12px;color:var(--adv);font-weight:700;background:var(--adv-bg);border:1px solid var(--adv-bd);border-radius:20px;padding:2px 10px;margin-left:6px';}
-    badge.textContent=nights+' night'+(nights>1?'s':'');
-    const coFg=document.getElementById('f-checkout')?.closest('.fg');
-    if(coFg&&!document.getElementById('nights-badge')) coFg.querySelector('label').appendChild(badge);
-  }
+
+  // Update nights badge
+  const badge=document.getElementById('nights-badge');
+  if(badge) badge.textContent = nights+' night'+(nights>1?'s':'');
+
+  // Update preset buttons active state
+  document.querySelectorAll('.days-preset-btn').forEach(b => {
+    const txt = b.textContent.trim();
+    const btnN = parseInt(txt, 10);
+    b.classList.toggle('active', btnN === nights);
+  });
+
+  updateRoomQtyUI(checkin, checkout);
   calcRoomTypeTotal();
 }
 
 function calcRoomTypeTotal(){
-  const typeKey=document.getElementById('f-room-typekey')?.value||'';
-  const rt=ROOM_TYPES.find(x=>x.key===typeKey);
   const checkin=document.getElementById('f-date')?.value||'';
   const checkout=document.getElementById('f-checkout')?.value||'';
   const nights=calcNights(checkin, checkout);
@@ -2624,28 +2709,41 @@ function calcRoomTypeTotal(){
   const extpax=parseInt(document.getElementById('f-extpax')?.value||0)||0;
   const cotId=document.getElementById('f-cottage')?.value||'';
   const cotVenue=cotId?ALL_VENUES.find(v=>v.id===cotId):null;
-  let total=0, rows='';
-  if(rt){
-    const roomTotal=rt.price*nights;
-    const extbedTotal=extbed*250*nights;
-    const extpaxTotal=extpax*100*nights;
-    const cotTotal=cotVenue?cotVenue.price*nights:0;
-    total=roomTotal+extbedTotal+extpaxTotal+cotTotal;
-    rows+=`<div class="pr-row"><span>${rt.icon} ${rt.label}</span><span class="mono">${peso(rt.price)}/night</span></div>`;
-    if(nights>1) rows+=`<div class="pr-row" style="opacity:.8"><span>× ${nights} nights</span><span class="mono">${peso(roomTotal)}</span></div>`;
-    if(extbed) rows+=`<div class="pr-row"><span>Extra bed ×${extbed}${nights>1?' × '+nights+' nights':''}</span><span class="mono">${peso(extbedTotal)}</span></div>`;
-    if(extpax) rows+=`<div class="pr-row"><span>Extra person ×${extpax}${nights>1?' × '+nights+' nights':''}</span><span class="mono">${peso(extpaxTotal)}</span></div>`;
-    if(cotVenue) rows+=`<div class="pr-row"><span>🌿 ${cotVenue.name}${nights>1?' × '+nights+' nights':''}</span><span class="mono">${peso(cotTotal)}</span></div>`;
-  } else {
-    rows=`<div class="pr-row" style="opacity:.4">Select a room type to see total</div>`;
+
+  let totalRoomsCost=0;
+  let totalRoomsCount=0;
+  let rows='';
+
+  ROOM_TYPES.forEach(rt => {
+    const qty = selectedRoomCounts[rt.key] || 0;
+    if(qty > 0){
+      totalRoomsCount += qty;
+      const sub = rt.price * qty * nights;
+      totalRoomsCost += sub;
+      rows += `<div class="pr-row"><span>${rt.icon} ${rt.label} ×${qty}${nights>1?' × '+nights+' nights':''}</span><span class="mono">${peso(sub)}</span></div>`;
+    }
+  });
+
+  const extbedTotal=extbed*250*nights;
+  const extpaxTotal=extpax*100*nights;
+  const cotTotal=cotVenue?cotVenue.price*nights:0;
+  const grandTotal = totalRoomsCost + extbedTotal + extpaxTotal + cotTotal;
+
+  if(extbed) rows+=`<div class="pr-row"><span>Extra bed ×${extbed}${nights>1?' × '+nights+' nights':''}</span><span class="mono">${peso(extbedTotal)}</span></div>`;
+  if(extpax) rows+=`<div class="pr-row"><span>Extra person ×${extpax}${nights>1?' × '+nights+' nights':''}</span><span class="mono">${peso(extpaxTotal)}</span></div>`;
+  if(cotVenue) rows+=`<div class="pr-row"><span>🌿 ${cotVenue.name}${nights>1?' × '+nights+' nights':''}</span><span class="mono">${peso(cotTotal)}</span></div>`;
+
+  if(totalRoomsCount === 0){
+    rows = `<div class="pr-row" style="color:#fca5a5">⚠️ Select at least 1 room using the ＋ button above</div>`;
   }
+
   const ps=document.getElementById('price-box');
   if(ps){
-    ps.innerHTML=rows+(rt?`<div class="pr-total"><span>Total</span><span class="mono">${peso(total)}</span></div>`:'');
-    ps.dataset.total=total;
+    ps.innerHTML=rows+(totalRoomsCount>0?`<div class="pr-total"><span>Total (${totalRoomsCount} room${totalRoomsCount>1?'s':''}${nights>1?', '+nights+' nights':''})</span><span class="mono">${peso(grandTotal)}</span></div>`:'');
+    ps.dataset.total=grandTotal;
   }
   updateDepositPreview();
-  return total;
+  return grandTotal;
 }
 
 function saveRoomTypeBooking(){
@@ -2676,11 +2774,50 @@ function saveRoomTypeBooking(){
     showToast('⚠️ Address / City is required.', '#dc2626');
     return;
   }
-  const typeKey=document.getElementById('f-room-typekey')?.value||'';
-  const status=document.getElementById('f-status').value;
-  const btype=document.getElementById('f-btype').value;
+
   const checkin=document.getElementById('f-date').value;
   const checkout=document.getElementById('f-checkout').value;
+  const nights=calcNights(checkin, checkout);
+
+  // Validate that at least 1 room is selected
+  const selectedTypes = Object.entries(selectedRoomCounts).filter(([_, qty]) => qty > 0);
+  const totalSelectedRooms = selectedTypes.reduce((sum, [_, q]) => sum + q, 0);
+
+  const errEl = document.getElementById('room-type-err');
+  if(totalSelectedRooms === 0){
+    if(errEl){
+      errEl.style.display='block';
+      errEl.textContent='⛔ Please select at least 1 room using the ＋ button.';
+    }
+    showToast('⚠️ Please select at least 1 room.', '#dc2626');
+    return;
+  }
+
+  // Allocate specific room venues for each chosen type
+  const allocatedRooms = [];
+  const assignedRoomIds = new Set();
+
+  for(const [typeKey, qty] of selectedTypes){
+    const availRooms = getAvailableRoomsByType(typeKey, checkin, checkout).filter(r => !assignedRoomIds.has(r.id));
+    if(availRooms.length < qty){
+      const rt = ROOM_TYPES.find(x => x.key === typeKey);
+      if(errEl){
+        errEl.style.display='block';
+        errEl.textContent=`⛔ Not enough ${rt?rt.label:'room'}s available. Requested ${qty}, but only ${availRooms.length} available.`;
+      }
+      return;
+    }
+    for(let i=0; i<qty; i++){
+      const picked = availRooms[i];
+      assignedRoomIds.add(picked.id);
+      allocatedRooms.push({ room: picked, typeKey, typeLabel: picked.type, price: picked.price });
+    }
+  }
+
+  if(errEl) errEl.style.display='none';
+
+  const status=document.getElementById('f-status').value;
+  const btype=document.getElementById('f-btype').value;
   const pax=document.getElementById('f-pax').value;
   const note=(document.getElementById('f-note').value||'').trim();
   const extbed=parseInt(document.getElementById('f-extbed')?.value||0)||0;
@@ -2688,36 +2825,79 @@ function saveRoomTypeBooking(){
   const gcashRef=(document.getElementById('f-gcashref')?.value||'').trim();
   const gcashamount=parseFloat(document.getElementById('f-gcashamount')?.value||0)||0;
   const deposit=parseFloat(document.getElementById('f-deposit')?.value||0)||0;
-  if(!typeKey){
-    const err=document.getElementById('room-type-err');
-    if(err){err.style.display='block';err.textContent='⛔ Please select a room type.';}
-    return;
-  }
-  // Find available room of this type
-  const room=pickRoomOfType(typeKey, checkin, checkout);
-  if(!room){
-    const err=document.getElementById('room-type-err');
-    if(err){
-      const rt=ROOM_TYPES.find(x=>x.key===typeKey);
-      err.style.display='block';
-      err.textContent=`⛔ No ${rt?rt.label:'room'} available for ${checkin} – ${checkout}. All rooms of this type are fully booked.`;
-    }
-    return;
-  }
-  const total=calcRoomTypeTotal();
+  const grandTotal=calcRoomTypeTotal();
+
   const cotId=document.getElementById('f-cottage')?.value||'';
   const cotVenue=cotId?ALL_VENUES.find(v=>v.id===cotId):null;
-  const newId=uid();
-  bookings.push({id:newId,name,contact,address,gcashRef,gcashamount,status,btype,venueId:room.id,date:checkin,checkout,pax,extbed,extpax,fhHours:0,note,total:total||0,deposit,idPhoto});
+
+  const roomNames = allocatedRooms.map(a => a.room.name).join(', ');
+  let leadBookingId = null;
+
+  allocatedRooms.forEach((alloc, idx) => {
+    const newId = uid();
+    if(idx === 0) leadBookingId = newId;
+
+    // Allocate add-ons and payment details to the lead room booking
+    const isLead = (idx === 0);
+    const roomSub = (alloc.price * nights) + (isLead ? (extbed*250*nights + extpax*100*nights) : 0);
+
+    const extraNote = allocatedRooms.length > 1
+      ? (isLead ? `${note ? note + ' · ' : ''}Group: ${roomNames}` : `Part of group (${roomNames}) · Lead: ${name}`)
+      : note;
+
+    bookings.push({
+      id: newId,
+      name,
+      contact,
+      address,
+      gcashRef: isLead ? gcashRef : '',
+      gcashamount: isLead ? gcashamount : 0,
+      status,
+      btype,
+      venueId: alloc.room.id,
+      date: checkin,
+      checkout,
+      pax: isLead ? pax : '',
+      extbed: isLead ? extbed : 0,
+      extpax: isLead ? extpax : 0,
+      fhHours: 0,
+      note: extraNote,
+      total: isLead ? grandTotal : 0, // Keep total consolidated on primary/lead booking
+      deposit: isLead ? deposit : 0,
+      idPhoto: isLead ? idPhoto : null,
+      linkedGroupId: leadBookingId
+    });
+  });
+
   if(cotVenue){
-    const nights=calcNights(checkin,checkout);
-    bookings.push({id:uid(),name,status,btype,venueId:cotId,date:checkin,checkout,pax,extpax:0,extbed:0,fhHours:0,note:'(with '+name.split(' ')[0]+' — linked from room)',total:cotVenue.price*nights,linkedRoom:newId});
+    bookings.push({
+      id: uid(),
+      name,
+      contact,
+      address,
+      status,
+      btype,
+      venueId: cotId,
+      date: checkin,
+      checkout,
+      pax: '',
+      extpax: 0,
+      extbed: 0,
+      fhHours: 0,
+      note: '(with ' + name.split(' ')[0] + ' · linked from ' + roomNames + ')',
+      total: cotVenue.price * nights,
+      linkedRoom: leadBookingId,
+      linkedGroupId: leadBookingId
+    });
   }
+
   save(); closeModal();
   ['rooms','cot','fh'].forEach(s=>renderSection(s));
   renderList();
-  showMessengerPrompt(newId);
+  showMessengerPrompt(leadBookingId);
+  showToast(`✅ Booked ${allocatedRooms.length} room(s) for ${name} (${roomNames})`, '#047857');
 }
+
 
 /* ===== FULL VENUE BOOKING ===== */
 function openFullVenueBooking(){
@@ -3214,6 +3394,16 @@ function formatMessengerBooking(id){
   const bk = bookings.find(b=>b.id===id);
   if(!bk) return '';
   const venue = ALL_VENUES.find(v=>v.id===bk.venueId);
+  // Detect if this booking is part of a multi-room group for the same client
+  let venueDisplay = venue ? (venue.icon + ' ' + venue.name) : 'Venue';
+  const groupBookings = bookings.filter(b => (b.linkedGroupId && b.linkedGroupId === (bk.linkedGroupId || bk.id)) || (b.name.trim().toLowerCase() === bk.name.trim().toLowerCase() && b.date === bk.date && b.checkout === bk.checkout));
+  if(groupBookings.length > 1){
+    const vNames = groupBookings.map(b => {
+      const vv = ALL_VENUES.find(x => x.id === b.venueId);
+      return vv ? (vv.icon + ' ' + vv.name) : b.venueId;
+    });
+    venueDisplay = vNames.join(' + ');
+  }
   const statusLabel = bk.status==='paid'?'Fully Paid':bk.status==='adv'?'With Advance':bk.status==='otw'?'🚗 On the way (No advance / Pay on arrival)':bk.status==='gcash'?'GCash Paid':'Walk-in / Unpaid';
   const nights = bk.checkout ? calcNights(bk.date, bk.checkout) : 1;
   const staffName = currentUser ? currentUser.name : 'Staff';
@@ -3222,7 +3412,7 @@ function formatMessengerBooking(id){
 ━━━━━━━━━━━━━━━━━━━━
 👤 Guest: ${bk.name}
 📞 Contact: ${bk.contact || 'N/A'}${bk.address ? `\n📍 Address: ${bk.address}` : ''}
-🏡 Venue: ${venue ? venue.icon + ' ' + venue.name : 'Venue'}
+🏡 Venue(s): ${venueDisplay}
 📅 Dates: ${bk.date}${bk.checkout ? ' ➔ ' + bk.checkout : ''} (${nights} night${nights>1?'s':''})
 👥 Pax: ${bk.pax || 'Standard'}
 💳 Status: ${statusLabel}
