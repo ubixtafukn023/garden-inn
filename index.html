@@ -2244,11 +2244,22 @@ function openDayPopup(sec, ds, dayBks){
         item.className='dp-item';
         item.style.flexDirection='column';
         item.style.gap='8px';
+        item.style.cursor='pointer';
+        item.onclick=(e)=>{
+          // If clicked directly on the card background or header area, open edit for the group booking
+          if(!e.target.closest('button') && !e.target.closest('[onclick*="openEdit"]') && !e.target.closest('[onclick*="openDel"]')){
+            closeDayPopup();
+            openEdit(rep.id);
+          }
+        };
         item.innerHTML=`
-          <div style="display:flex;align-items:flex-start;gap:8px;width:100%">
+          <div onclick="event.stopPropagation();closeDayPopup();openEdit('${rep.id}')" style="display:flex;align-items:flex-start;gap:8px;width:100%;cursor:pointer;padding:4px 6px;border-radius:8px;transition:background .2s" onmouseover="this.style.background='rgba(0,0,0,0.03)'" onmouseout="this.style.background='transparent'" title="Click to edit group booking as a whole">
             <div style="width:10px;height:10px;border-radius:50%;background:${sc};flex-shrink:0;margin-top:4px"></div>
             <div style="flex:1;min-width:0">
-              <div class="dp-guest" style="font-weight:700;color:var(--text);font-size:14px">${rep.name}${contLabel}</div>
+              <div class="dp-guest" style="font-weight:700;color:var(--text);font-size:14px;display:flex;align-items:center;gap:4px">
+                <span>${rep.name}${contLabel}</span>
+                <span style="font-size:11px;color:var(--text3);font-weight:normal">✏️ (Edit all)</span>
+              </div>
               <div class="dp-guest" style="color:var(--text2)">${group.length} rooms/venues booked · ${STATUS_L[rep.status]||'Walk-in'}</div>
               ${groupPaySummary}
             </div>
@@ -3273,12 +3284,23 @@ function openEdit(id){
   const bk=bookings.find(b=>b.id===id);
   if(!bk) return;
   editingId=id;
+
+  // Detect group bookings
+  const groupBks = bookings.filter(b => 
+    (b.linkedGroupId && b.linkedGroupId === (bk.linkedGroupId || bk.id)) ||
+    (b.name && b.name.trim().toLowerCase() === bk.name.trim().toLowerCase() && b.date === bk.date && b.checkout === bk.checkout)
+  );
+  const isGroup = groupBks.length > 1;
+  const groupTotalAmt = isGroup ? groupBks.reduce((s,b)=>s+(b.total||0), 0) : (bk.total||0);
+  const groupDepAmt   = isGroup ? groupBks.reduce((s,b)=>s+(b.deposit||0), 0) : (bk.deposit||0);
+  const groupGcAmt    = isGroup ? groupBks.reduce((s,b)=>s+(b.gcashamount||0), 0) : (bk.gcashamount||0);
+
   const v=ALL_VENUES.find(x=>x.id===bk.venueId);
   const kind=v?v.kind:'room';
   const section=secFromVenue(kind);
   const isFH=section==='fh';
   const venueList=venuesForModal(section);
-  document.getElementById('modal-title').textContent='Edit Booking';
+  document.getElementById('modal-title').textContent = isGroup ? `Edit Group Booking (${groupBks.length} Rooms)` : 'Edit Booking';
 
   let addonsBlock='';
   if(isFH){
@@ -3350,9 +3372,38 @@ function openEdit(id){
       </div>
       <input type="hidden" id="f-btype" value="${bk.btype||'Walk-in'}">
     </div>
+    ${isGroup ? `
+    <div class="fg" style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:10px;padding:12px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <label style="font-weight:700;color:#1e293b;font-size:13px;margin:0">🏨 All Rooms in this Group (${groupBks.length} rooms)</label>
+        <button type="button" onclick="addRoomForClient('${id}')" style="background:#f5f3ff;border:1px solid #ddd6fe;color:#6d28d9;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer">＋ Add More Room</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        ${groupBks.map((gb, i) => {
+          const gv = ALL_VENUES.find(x => x.id === gb.venueId);
+          const nights = calcNights(gb.date, gb.checkout || gb.date);
+          const isCurrent = gb.id === bk.id;
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:8px;background:${isCurrent?'#fff':'#f1f5f9'};border:${isCurrent?'2px solid #3b82f6':'1px solid #e2e8f0'}">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:14px">${gv?gv.icon:'🛏️'}</span>
+              <div>
+                <div style="font-size:13px;font-weight:700;color:${isCurrent?'#1d4ed8':'#1e293b'}">${gv?gv.name:'Unknown Room'}${isCurrent?' <span style="font-size:10px;background:#dbeafe;color:#1e40af;padding:1px 5px;border-radius:4px">Viewing</span>':''}</div>
+                <div style="font-size:11px;color:#64748b">${gv?gv.type:''} · ${nights} night${nights>1?'s':''}</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:13px;font-weight:700;font-family:'DM Mono',monospace">${peso(gb.total||0)}</span>
+              ${!isCurrent ? `<button type="button" onclick="openEdit('${gb.id}')" style="border:none;background:#e0f2fe;color:#0369a1;border-radius:5px;padding:3px 7px;font-size:11px;font-weight:600;cursor:pointer" title="Switch to view this room">Switch</button>` : ''}
+              <button type="button" onclick="openDelScreen('${gb.id}')" style="border:none;background:#fee2e2;color:#dc2626;border-radius:5px;padding:3px 7px;font-size:11px;font-weight:600;cursor:pointer" title="Delete this room from group">🗑️</button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:#475569">Editing details below applies to the primary booking and syncs guest/payment status to all ${groupBks.length} rooms.</div>
+    </div>` : ''}
     <div class="frow">
       <div class="fg">
-        <label>${isFH?'Venue':kind==='cottage'?'Cottage':'Room'}</label>
+        <label>${isFH?'Venue':kind==='cottage'?'Cottage':(isGroup?'Selected Room to Assign':'Room')}</label>
         <select id="f-venue" onchange="onVenueChange('${section}')">${venueList.map(vn=>`<option value="${vn.id}"${vn.id===bk.venueId?'selected':''}>${vn.icon} ${vn.name} — ${peso(vn.price)}</option>`).join('')}</select>
       </div>
       <div class="fg">
