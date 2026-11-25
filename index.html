@@ -1242,6 +1242,11 @@ function delCheckPin(){
         `<b style="color:#dc2626">${delPendingUser.name}</b> confirmed.<br><br>` +
         `Delete <b>${delPendingDayIds.length} booking${delPendingDayIds.length!==1?'s':''}</b> on <b>${delPendingDayLabel}</b>?<br>` +
         `<span style="font-size:12px;color:var(--text3)">This cannot be undone.</span>`;
+    } else if(delPendingId==='__group__'){
+      document.getElementById('del-confirm-msg').innerHTML =
+        `<b style="color:#dc2626">${delPendingUser.name}</b> confirmed.<br><br>` +
+        `Delete all <b>${delPendingDayIds.length} rooms</b> for <b>${delPendingDayLabel}</b>?<br>` +
+        `<span style="font-size:12px;color:var(--text3)">This cannot be undone.</span>`;
     } else {
       const bk = bookings.find(b=>b.id===delPendingId);
       const v  = bk ? ALL_VENUES.find(x=>x.id===bk.venueId) : null;
@@ -1262,8 +1267,8 @@ function delCheckPin(){
 }
 
 function delExecute(){
-  // Day-delete mode
-  if(delPendingId==='__day__'){
+  // Day-delete mode or Group-delete mode
+  if(delPendingId==='__day__' || delPendingId==='__group__'){
     const toDelete = new Set(delPendingDayIds);
     const deleted = bookings.filter(b=>toDelete.has(b.id));
     deleted.forEach(bk=>{
@@ -1288,7 +1293,8 @@ function delExecute(){
     ['rooms','cot','fh'].forEach(s=>renderSection(s));
     renderList();
     renderOverview();
-    showToast(`🗑️ Deleted ${deleted.length} booking${deleted.length!==1?'s':''} for ${delPendingDayLabel}`,'#dc2626');
+    const actionLabel = delPendingId==='__group__' ? `Deleted all ${deleted.length} rooms for ${delPendingDayLabel}` : `Deleted ${deleted.length} booking${deleted.length!==1?'s':''} for ${delPendingDayLabel}`;
+    showToast('🗑️ ' + actionLabel, '#dc2626');
     return;
   }
   // Single-booking delete (original logic)
@@ -1411,6 +1417,58 @@ function calcGcashFee(amt){
 }
 function peso(n){return '₱'+Number(n||0).toLocaleString();}
 
+
+/* ===== NORMALIZE MULTI-ROOM / GROUP ALLOCATIONS ===== */
+function normalizeLegacyGroupBookings(){
+  let changed = false;
+  // Group by guest name and dates
+  const groups = new Map();
+  bookings.forEach(b => {
+    if(!b.name || !b.date) return;
+    const key = (b.linkedGroupId || (b.name.trim().toLowerCase() + '::' + b.date + '::' + (b.checkout||b.date)));
+    if(!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(b);
+  });
+
+  groups.forEach((groupBks) => {
+    if(groupBks.length <= 1) return;
+    // Check if only one lead room has the entire total/payment while others are 0
+    const hasZeros = groupBks.some(b => !b.total || b.total === 0);
+    const sumTotal = groupBks.reduce((s, b) => s + (b.total || 0), 0);
+    const sumDeposit = groupBks.reduce((s, b) => s + (b.deposit || 0), 0);
+    const sumGcash = groupBks.reduce((s, b) => s + (b.gcashamount || 0), 0);
+
+    // Calculate natural venue costs
+    const roomSubs = groupBks.map(b => {
+      const v = ALL_VENUES.find(x => x.id === b.venueId);
+      const nights = calcNights(b.date, b.checkout || b.date);
+      const base = v ? v.price * nights : 0;
+      const ext = (b.extbed || 0) * 250 * nights + (b.extpax || 0) * 100 * nights;
+      return base + ext;
+    });
+    const naturalTotal = roomSubs.reduce((a, b) => a + b, 0);
+
+    if(hasZeros && (sumTotal > 0 || naturalTotal > 0)){
+      const totalToUse = sumTotal > 0 ? sumTotal : naturalTotal;
+      let runningTot = 0, runningDep = 0, runningGc = 0;
+
+      groupBks.forEach((b, idx) => {
+        const isLast = (idx === groupBks.length - 1);
+        let ratio = naturalTotal > 0 ? (roomSubs[idx] / naturalTotal) : (1 / groupBks.length);
+        let t = isLast ? (totalToUse - runningTot) : Math.round(totalToUse * ratio);
+        let d = isLast ? (sumDeposit - runningDep) : Math.round(sumDeposit * ratio);
+        let g = isLast ? (sumGcash - runningGc) : Math.round(sumGcash * ratio);
+
+        runningTot += t; runningDep += d; runningGc += g;
+        b.total = t;
+        b.deposit = d;
+        b.gcashamount = g;
+        changed = true;
+      });
+    }
+  });
+  return changed;
+}
 function save(){
   // Update UI immediately
   document.getElementById('total-badge').textContent=bookings.length+' booking'+(bookings.length!==1?'s':'');
@@ -2148,28 +2206,58 @@ function openDayPopup(sec, ds, dayBks){
       if(group.length>1){
         // Multi-venue guest card
         const totalAmt=group.reduce((s,b)=>s+(b.total||0),0);
+        const totalDep=group.reduce((s,b)=>s+(b.deposit||0),0);
+        const totalGc=group.reduce((s,b)=>s+(b.gcashamount||0),0);
+
+        // Header status summary breakdown
+        let groupPaySummary = '';
+        if(rep.status === 'adv'){
+          const bal = Math.max(0, totalAmt - totalDep);
+          groupPaySummary = `<div style="font-size:11px;color:var(--adv);font-weight:700;margin-top:2px">Paid: ${peso(totalDep)} · Bal: ${peso(bal)}</div>`;
+        } else if(rep.status === 'gcash' && totalGc > 0 && totalGc < totalAmt){
+          const bal = Math.max(0, totalAmt - totalGc);
+          groupPaySummary = `<div style="font-size:11px;color:var(--gcash);font-weight:700;margin-top:2px">GCash: ${peso(totalGc)} · Bal: ${peso(bal)}</div>`;
+        }
+
         const venueLines=group.map(b=>{
           const vv=ALL_VENUES.find(x=>x.id===b.venueId);
           const nights=calcNights(b.date,b.checkout||b.date);
-          return `<div onclick="event.stopPropagation();closeDayPopup();openEdit('${b.id}')" style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border-radius:6px;cursor:pointer;background:var(--surface);margin-bottom:3px;gap:6px">
-            <span style="font-size:12px;color:var(--text2)">${vv?vv.icon+' '+vv.name:'?'}${nights>1?' · '+nights+'n':''}</span>
-            <span style="font-size:12px;font-weight:600;font-family:'DM Mono',monospace;color:var(--text)">${peso(b.total||0)}</span>
+          let rowPay = peso(b.total||0);
+          if(b.status === 'adv' && (b.deposit||0) > 0){
+            rowPay = `${peso(b.total||0)} <span style="font-size:10px;color:var(--adv)">(adv: ${peso(b.deposit)})</span>`;
+          } else if(b.status === 'gcash' && (b.gcashamount||0) > 0 && (b.gcashamount||0) < (b.total||0)){
+            rowPay = `${peso(b.total||0)} <span style="font-size:10px;color:var(--gcash)">(gc: ${peso(b.gcashamount)})</span>`;
+          }
+
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:8px;background:var(--surface);margin-bottom:4px;gap:8px;border:1px solid #f0ede8">
+            <div onclick="event.stopPropagation();closeDayPopup();openEdit('${b.id}')" style="flex:1;cursor:pointer;display:flex;align-items:center;gap:6px">
+              <span style="font-size:13px;font-weight:600;color:var(--text)">${vv?vv.icon+' '+vv.name:'?'}${nights>1?' · '+nights+'n':''}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:12px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text)">${rowPay}</span>
+              <button onclick="event.stopPropagation();closeDayPopup();openDelScreen('${b.id}')" style="border:none;background:#fee2e2;color:#dc2626;border-radius:6px;padding:3px 7px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:2px" title="Delete this room booking">🗑️</button>
+            </div>
           </div>`;
         }).join('');
+
         const item=document.createElement('div');
         item.className='dp-item';
         item.style.flexDirection='column';
-        item.style.gap='6px';
+        item.style.gap='8px';
         item.innerHTML=`
           <div style="display:flex;align-items:flex-start;gap:8px;width:100%">
             <div style="width:10px;height:10px;border-radius:50%;background:${sc};flex-shrink:0;margin-top:4px"></div>
             <div style="flex:1;min-width:0">
               <div class="dp-guest" style="font-weight:700;color:var(--text);font-size:14px">${rep.name}${contLabel}</div>
-              <div class="dp-guest" style="color:var(--text2)">${group.length} venues booked · ${STATUS_L[rep.status]||'Walk-in'}</div>
+              <div class="dp-guest" style="color:var(--text2)">${group.length} rooms/venues booked · ${STATUS_L[rep.status]||'Walk-in'}</div>
+              ${groupPaySummary}
             </div>
-            <div>
-              <span class="badge ${rep.status}">${STATUS_L[rep.status]||'Walk-in'}</span>
-              <div style="margin-top:4px;font-size:13px;font-weight:700;color:var(--text);font-family:'DM Mono',monospace;text-align:right">${peso(totalAmt)}</div>
+            <div style="text-align:right">
+              <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">
+                <span class="badge ${rep.status}">${STATUS_L[rep.status]||'Walk-in'}</span>
+                <button onclick="event.stopPropagation();closeDayPopup();openDelGroupBookings('${rep.id}','${ds}')" style="border:none;background:#fef2f2;color:#dc2626;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer" title="Delete all rooms for this guest">🗑️ Delete All Rooms</button>
+              </div>
+              <div style="margin-top:4px;font-size:14px;font-weight:800;color:var(--text);font-family:'DM Mono',monospace;text-align:right">${peso(totalAmt)}</div>
             </div>
           </div>
           <div style="width:100%;padding-left:18px">${venueLines}</div>`;
@@ -2217,8 +2305,11 @@ function openDayPopup(sec, ds, dayBks){
             <div class="dp-guest" style="font-weight:600;color:var(--text);font-size:13px;margin-top:2px">${rep.name}</div>
             <div class="dp-guest">${rep.checkout&&rep.checkout!==rep.date?'Until '+fmtFull(rep.checkout)+(nights>1?' · '+nights+' nights':''):'1 night'}${rep.pax?' · '+rep.pax+' pax':''}</div>
           </div>
-          <div class="dp-badge-wrap">
-            <span class="badge ${rep.status}">${STATUS_L[rep.status]||'Walk-in'}</span>
+          <div class="dp-badge-wrap" style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span class="badge ${rep.status}">${STATUS_L[rep.status]||'Walk-in'}</span>
+              <button onclick="event.stopPropagation();closeDayPopup();openDelScreen('${rep.id}')" style="border:none;background:#fee2e2;color:#dc2626;border-radius:6px;padding:3px 7px;font-size:11px;font-weight:700;cursor:pointer" title="Delete booking">🗑️</button>
+            </div>
             ${paymentHtml}
           </div>`;
         item.onclick=()=>{ closeDayPopup(); openEdit(rep.id); };
@@ -2241,6 +2332,40 @@ function closeDayPopup(){
 }
 
 /* ===== DELETE ALL BOOKINGS FOR A DAY ===== */
+
+/* ===== DELETE GROUP BOOKINGS FOR A CLIENT ===== */
+function openDelGroupBookings(repId, ds){
+  const rep = bookings.find(b => b.id === repId);
+  if(!rep) return;
+  const guestName = rep.name;
+  // Find all bookings for this guest group
+  const group = bookings.filter(b => 
+    (b.linkedGroupId && b.linkedGroupId === (rep.linkedGroupId || rep.id)) ||
+    (b.name && b.name.trim().toLowerCase() === rep.name.trim().toLowerCase() && (b.date === rep.date || (ds && dateInRange(ds, b.date, b.checkout||b.date))))
+  );
+  const ids = group.map(b => b.id);
+  delPendingId = '__group__';
+  delPendingDayIds = ids;
+  delPendingDayLabel = guestName + ' (' + ids.length + ' rooms)';
+  delPendingDayDate = ds || rep.date;
+  const guestLabel = document.getElementById('del-guest-label');
+  guestLabel.innerHTML = `<b style="color:#dc2626">${ids.length} room${ids.length!==1?'s':''} for ${guestName}</b>`;
+  // Build user list
+  const ul = document.getElementById('del-user-list');
+  ul.innerHTML = USERS.map(u=>`
+    <div class="del-user-card" id="dub-${u.id}" onclick="delSelectUser('${u.id}')">
+      <div class="du-avatar" style="background:${u.color}">${u.avatar}</div>
+      <div class="du-name">${u.name}</div>
+      <div class="du-role">${u.role}</div>
+    </div>`).join('');
+  delPendingUser=null; delPinEntry='';
+  document.getElementById('del-step1').style.display='block';
+  document.getElementById('del-step2').style.display='none';
+  document.getElementById('del-step3').style.display='none';
+  document.getElementById('del-pin-err').textContent='';
+  const ds2=document.getElementById('del-screen');
+  ds2.style.display='flex';
+}
 function deleteAllDayBookings(ds, dayBks){
   // Reuse the existing del-screen flow with a special "delete day" mode
   const ids = dayBks.map(b=>b.id);
@@ -2852,16 +2977,34 @@ function saveRoomTypeBooking(){
   const roomNames = allocatedRooms.map(a => a.room.name).join(', ');
   let leadBookingId = null;
 
+  // Calculate natural cost for each allocated room (including add-ons)
+  const roomCosts = allocatedRooms.map((alloc, idx) => {
+    const isLead = (idx === 0);
+    return (alloc.price * nights) + (isLead ? (extbed*250*nights + extpax*100*nights) : 0);
+  });
+  const totalBaseCost = roomCosts.reduce((a, b) => a + b, 0);
+
+  // Proportional allocation of total, deposit, and gcash amount across all rooms
+  let allocatedTotalRunning = 0, allocatedDepRunning = 0, allocatedGcRunning = 0;
+
   allocatedRooms.forEach((alloc, idx) => {
     const newId = uid();
     if(idx === 0) leadBookingId = newId;
-
-    // Allocate add-ons and payment details to the lead room booking
     const isLead = (idx === 0);
-    const roomSub = (alloc.price * nights) + (isLead ? (extbed*250*nights + extpax*100*nights) : 0);
+    const isLast = (idx === allocatedRooms.length - 1);
+
+    const ratio = totalBaseCost > 0 ? (roomCosts[idx] / totalBaseCost) : (1 / allocatedRooms.length);
+    const allocatedRoomTotal = isLast ? (grandTotal - allocatedTotalRunning) : Math.round(grandTotal * ratio);
+    allocatedTotalRunning += allocatedRoomTotal;
+
+    const allocatedDep = isLast ? (deposit - allocatedDepRunning) : Math.round(deposit * ratio);
+    allocatedDepRunning += allocatedDep;
+
+    const allocatedGc = isLast ? (gcashamount - allocatedGcRunning) : Math.round(gcashamount * ratio);
+    allocatedGcRunning += allocatedGc;
 
     const extraNote = allocatedRooms.length > 1
-      ? (isLead ? `${note ? note + ' · ' : ''}Group: ${roomNames}` : `Part of group (${roomNames}) · Lead: ${name}`)
+      ? `${note ? note + ' · ' : ''}Group: ${roomNames}`
       : note;
 
     bookings.push({
@@ -2869,8 +3012,8 @@ function saveRoomTypeBooking(){
       name,
       contact,
       address,
-      gcashRef: isLead ? gcashRef : '',
-      gcashamount: isLead ? gcashamount : 0,
+      gcashRef: gcashRef || '',
+      gcashamount: allocatedGc,
       status,
       btype,
       venueId: alloc.room.id,
@@ -2881,8 +3024,8 @@ function saveRoomTypeBooking(){
       extpax: isLead ? extpax : 0,
       fhHours: 0,
       note: extraNote,
-      total: isLead ? grandTotal : 0, // Keep total consolidated on primary/lead booking
-      deposit: isLead ? deposit : 0,
+      total: allocatedRoomTotal,
+      deposit: allocatedDep,
       idPhoto: isLead ? idPhoto : null,
       linkedGroupId: leadBookingId
     });
@@ -3409,7 +3552,30 @@ function saveBooking(section){
   const data={name,contact,address,gcashRef,gcashamount,status,btype,venueId,date,checkout,pax,extbed,extpax,fhHours,note,total:total||0,deposit,idPhoto};
   if(editingId){
     const idx=bookings.findIndex(b=>b.id===editingId);
-    if(idx>-1) bookings[idx]={...bookings[idx],...data};
+    if(idx>-1){
+      const oldBk = bookings[idx];
+      bookings[idx]={...oldBk,...data};
+
+      // Check if this booking is part of a multi-room group
+      const groupBks = bookings.filter(b => 
+        (b.linkedGroupId && b.linkedGroupId === (oldBk.linkedGroupId || oldBk.id)) ||
+        (b.name && b.name.trim().toLowerCase() === oldBk.name.trim().toLowerCase() && b.date === oldBk.date && b.checkout === oldBk.checkout)
+      );
+
+      // If updating a group booking, synchronize status, btype, contact, gcashRef across the group
+      if(groupBks.length > 1){
+        groupBks.forEach(b => {
+          if(b.id !== oldBk.id){
+            b.name = name;
+            b.contact = contact;
+            b.address = address;
+            b.status = status;
+            b.btype = btype;
+            if(gcashRef) b.gcashRef = gcashRef;
+          }
+        });
+      }
+    }
   } else {
     const newId=uid();
     bookings.push({id:newId,...data});
@@ -3975,7 +4141,13 @@ Promise.all([
   db.ref('rcs_dellog').once('value')
 ]).then(([snapBookings, snapDel])=>{
   const fbBookings = snapBookings.val();
-  if(Array.isArray(fbBookings)) bookings = fbBookings;
+  if(Array.isArray(fbBookings)){
+    bookings = fbBookings;
+    if(normalizeLegacyGroupBookings()){
+      // If legacy group bookings were balanced, save back to firebase
+      setTimeout(()=>save(), 200);
+    }
+  }
   const fbDel = snapDel.val();
   if(Array.isArray(fbDel)) deleteLog = fbDel;
   _fbReady = true;
@@ -3998,6 +4170,7 @@ Promise.all([
     // Only update if data actually changed (avoid loop from own writes)
     if(JSON.stringify(val)===JSON.stringify(bookings)) return;
     bookings = val;
+    normalizeLegacyGroupBookings();
     ['rooms','cot','fh'].forEach(s=>renderSection(s));
     renderList&&renderList();
     renderOverview&&renderOverview();
