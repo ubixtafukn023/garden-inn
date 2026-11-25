@@ -2514,14 +2514,7 @@ function openAdd(section,venueId='',date=''){
       </div>
       <div class="gcash-fee-note" style="margin-top:6px;font-size:11px;color:var(--gcash);font-weight:600;display:none"></div>
     </div>
-    <div class="fg">
-      <label>Booking type</label>
-      <div class="btype-sel">
-        <div class="bopt" onclick="selBtype('Walk-in')" id="bopt-wi">🚶 Walk-in</div>
-        <div class="bopt" onclick="selBtype('Online')"  id="bopt-ol">🌐 Online</div>
-      </div>
-      <input type="hidden" id="f-btype" value="Walk-in">
-    </div>
+    <input type="hidden" id="f-btype" value="Walk-in">
     <div class="frow">
       <div class="fg">
         <label>${isFH?'Venue / Room / Cottage':isCot?'Cottage':'Room'}</label>
@@ -2753,14 +2746,7 @@ function buildRoomTypeBody(selDate, selCheckout){
       </div>
       <div class="gcash-fee-note" style="margin-top:6px;font-size:11px;color:var(--gcash);font-weight:600;display:none"></div>
     </div>
-    <div class="fg">
-      <label>Booking type</label>
-      <div class="btype-sel">
-        <div class="bopt" onclick="selBtype('Walk-in')" id="bopt-wi">🚶 Walk-in</div>
-        <div class="bopt" onclick="selBtype('Online')"  id="bopt-ol">🌐 Online</div>
-      </div>
-      <input type="hidden" id="f-btype" value="Walk-in">
-    </div>
+    <input type="hidden" id="f-btype" value="Walk-in">
 
     <!-- DATES & DAY PRESET SELECTOR -->
     <div class="frow">
@@ -3364,14 +3350,7 @@ function openEdit(id){
       </div>
       <div class="gcash-fee-note" style="margin-top:6px;font-size:11px;color:var(--gcash);font-weight:600;display:none"></div>
     </div>
-    <div class="fg">
-      <label>Booking type</label>
-      <div class="btype-sel">
-        <div class="bopt" onclick="selBtype('Walk-in')" id="bopt-wi">🚶 Walk-in</div>
-        <div class="bopt" onclick="selBtype('Online')"  id="bopt-ol">🌐 Online</div>
-      </div>
-      <input type="hidden" id="f-btype" value="${bk.btype||'Walk-in'}">
-    </div>
+    <input type="hidden" id="f-btype" value="${bk.btype||'Walk-in'}">
     ${isGroup ? `
     <div class="fg" style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:10px;padding:12px;margin-bottom:14px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
