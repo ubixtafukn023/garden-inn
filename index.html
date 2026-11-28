@@ -1843,8 +1843,22 @@ function renderMonth(sec){
     const ds=fmt(date);
     const cell=document.createElement('div');
     cell.className='mc'+(ds===td?' tm':'')+((!thisMonth)?' om':'');
-    const dn=document.createElement('div');dn.className='mdn';dn.textContent=date.getDate();cell.appendChild(dn);
     const dayBks=bookings.filter(b=>{const v=ALL_VENUES.find(x=>x.id===b.venueId);return v&&v.kind===kindFilter&&dateInRange(ds,b.date,b.checkout||b.date);});
+    const allKindVenues=ALL_VENUES.filter(v=>v.kind===kindFilter);
+    const bookedIds=new Set(dayBks.map(b=>b.venueId));
+    const vacantCount=allKindVenues.filter(v=>!bookedIds.has(v.id)).length;
+    const dnRow=document.createElement('div');
+    dnRow.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;gap:2px';
+    const dn=document.createElement('div');dn.className='mdn';dn.style.marginBottom='0';dn.textContent=date.getDate();
+    const vacBadge=document.createElement('span');
+    vacBadge.style.cssText=vacantCount>0
+      ?'font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;background:#dcfce7;color:#15803d;white-space:nowrap'
+      :'font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;background:#fee2e2;color:#dc2626;white-space:nowrap';
+    vacBadge.textContent=vacantCount>0?(vacantCount+' free'):'Full';
+    vacBadge.title=vacantCount+' of '+allKindVenues.length+' vacant on '+ds;
+    dnRow.appendChild(dn);
+    dnRow.appendChild(vacBadge);
+    cell.appendChild(dnRow);
 
     // Group by guest name across all venues
     const guestGroups=groupBookingsByGuest(dayBks,ds);
@@ -2197,8 +2211,41 @@ function openDayPopup(sec, ds, dayBks){
     d.toLocaleDateString('en-PH',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
   const list=document.getElementById('day-popup-list');
   list.innerHTML='';
+
+  // Show Vacant Rooms / Venues summary for this day
+  const kindFilter = sec==='rooms'?'room':sec==='cot'?'cottage':'fh';
+  const allSecVenues = ALL_VENUES.filter(v=>v.kind===kindFilter);
+  const allDayBookedIds = new Set(
+    bookings.filter(b=>{
+      const vv=ALL_VENUES.find(x=>x.id===b.venueId);
+      return vv&&vv.kind===kindFilter&&dateInRange(ds,b.date,b.checkout||b.date);
+    }).map(b=>b.venueId)
+  );
+  const vacantVenues = allSecVenues.filter(v=>!allDayBookedIds.has(v.id));
+  const secWord = kindFilter==='room'?'Rooms':kindFilter==='cottage'?'Cottages':'Hall';
+  const vacBox = document.createElement('div');
+  vacBox.style.cssText = vacantVenues.length>0
+    ? 'background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 12px;margin-bottom:10px'
+    : 'background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px 12px;margin-bottom:10px';
+  if(vacantVenues.length>0){
+    const chips = vacantVenues.map(vv=>{
+      const rt = ROOM_TYPES.find(x=>x.key===vv.typeKey);
+      const shortType = rt ? rt.label.replace('Standard ','Std ').replace(' Room','') : '';
+      return `<button type="button" onclick="closeDayPopup();openAdd('${sec==='cot'?'cottages':sec}','${vv.id}','${ds}')" style="border:1px solid #86efac;background:#fff;color:#166534;border-radius:8px;padding:3px 8px;font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px" title="Click to book ${vv.name}">${vv.icon} ${vv.name}${shortType?' <span style="opacity:.7;font-weight:500">('+shortType+')</span>':''}</button>`;
+    }).join('');
+    vacBox.innerHTML = `
+      <div style="font-size:12px;font-weight:700;color:#15803d;margin-bottom:6px">✅ Vacant ${secWord} (${vacantVenues.length} of ${allSecVenues.length} available)</div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px">${chips}</div>`;
+  } else {
+    vacBox.innerHTML = `<div style="font-size:12px;font-weight:700;color:#dc2626">🔴 Fully Booked — No vacant ${secWord.toLowerCase()} on this date</div>`;
+  }
+  list.appendChild(vacBox);
+
   if(!dayBks||!dayBks.length){
-    list.innerHTML='<div class="dp-empty">No bookings yet for this date.</div>';
+    const emptyEl=document.createElement('div');
+    emptyEl.className='dp-empty';
+    emptyEl.textContent='No bookings yet for this date.';
+    list.appendChild(emptyEl);
   } else {
     // Group by guest name
     const guestGroups=groupBookingsByGuest(dayBks,ds);
@@ -2244,7 +2291,7 @@ function openDayPopup(sec, ds, dayBks){
 
           return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:8px;background:var(--surface);margin-bottom:4px;gap:8px;border:1px solid #f0ede8">
             <div onclick="event.stopPropagation();closeDayPopup();openEdit('${b.id}')" style="flex:1;cursor:pointer;display:flex;align-items:center;gap:6px">
-              <span style="font-size:13px;font-weight:600;color:var(--text)">${vv?vv.icon+' '+vv.name:'?'}${nights>1?' · '+nights+'n':''}</span>
+              <span style="font-size:13px;font-weight:600;color:var(--text)">${vv?vv.icon+' '+vv.name+(vv.type?' <span style="font-size:11px;font-weight:500;color:var(--text2)">('+vv.type+')</span>':''):'?'}${nights>1?' · '+nights+'n':''}</span>
             </div>
             <div style="display:flex;align-items:center;gap:8px">
               <span style="font-size:12px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text)">${rowPay}</span>
@@ -2288,7 +2335,7 @@ function openDayPopup(sec, ds, dayBks){
         list.appendChild(item);
       } else {
         // Single booking — original style
-        const vLabel=rt?(v.icon+' '+rt.label):(v?v.icon+' '+v.name:'Unknown');
+        const vLabel=v?(v.icon+' '+v.name+(rt?' · '+rt.label:'')):'Unknown';
         const item=document.createElement('div');item.className='dp-item';
         const nights=calcNights(rep.date, rep.checkout||rep.date);
         let paymentHtml='';
