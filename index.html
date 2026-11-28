@@ -1417,6 +1417,10 @@ function calcGcashFee(amt){
   amt=parseFloat(amt||0)||0;
   return amt > 0 ? Math.ceil(amt / 500) * 10 : 0;
 }
+function calcGcashNet(amt){
+  amt=parseFloat(amt||0)||0;
+  return amt > 0 ? Math.max(0, amt - calcGcashFee(amt)) : 0;
+}
 function peso(n){return '₱'+Number(n||0).toLocaleString();}
 
 
@@ -1522,9 +1526,10 @@ function pillAmountLabel(bk){
   }
   if(bk.status==='gcash'){
     const amt=bk.gcashamount||0;
-    if(amt>0&&amt<bk.total){
-      const bal=Math.max(0,bk.total-amt);
-      return `📱${peso(amt)} bal:${peso(bal)}`;
+    const net=calcGcashNet(amt);
+    if(amt>0&&net<bk.total){
+      const bal=Math.max(0,bk.total-net);
+      return `📱${peso(net)} bal:${peso(bal)}`;
     }
     return peso(bk.total);
   }
@@ -2216,9 +2221,15 @@ function openDayPopup(sec, ds, dayBks){
         if(rep.status === 'adv'){
           const bal = Math.max(0, totalAmt - totalDep);
           groupPaySummary = `<div style="font-size:11px;color:var(--adv);font-weight:700;margin-top:2px">Paid: ${peso(totalDep)} · Bal: ${peso(bal)}</div>`;
-        } else if(rep.status === 'gcash' && totalGc > 0 && totalGc < totalAmt){
-          const bal = Math.max(0, totalAmt - totalGc);
-          groupPaySummary = `<div style="font-size:11px;color:var(--gcash);font-weight:700;margin-top:2px">GCash: ${peso(totalGc)} · Bal: ${peso(bal)}</div>`;
+        } else if(rep.status === 'gcash' && totalGc > 0){
+          const gcFee = calcGcashFee(totalGc);
+          const gcNet = Math.max(0, totalGc - gcFee);
+          const bal = Math.max(0, totalAmt - gcNet);
+          if(bal > 0){
+            groupPaySummary = `<div style="font-size:11px;color:var(--gcash);font-weight:700;margin-top:2px">GCash: ${peso(totalGc)} (-${peso(gcFee)} fee = ${peso(gcNet)}) · Bal: ${peso(bal)}</div>`;
+          } else {
+            groupPaySummary = `<div style="font-size:11px;color:var(--gcash);font-weight:700;margin-top:2px">GCash: ${peso(totalGc)} (-${peso(gcFee)} fee = ${peso(gcNet)}) · Paid</div>`;
+          }
         }
 
         const venueLines=group.map(b=>{
@@ -2291,11 +2302,13 @@ function openDayPopup(sec, ds, dayBks){
           </div>`;
         } else if(rep.status==='gcash'){
           const amt=rep.gcashamount||0;
-          if(amt>0&&amt<(rep.total||0)){
-            const bal=Math.max(0,(rep.total||0)-amt);
+          const fee=calcGcashFee(amt);
+          const net=Math.max(0,amt-fee);
+          const bal=Math.max(0,(rep.total||0)-net);
+          if(amt>0&&bal>0){
             paymentHtml=`<div style="margin-top:5px;display:flex;flex-direction:column;align-items:flex-end;gap:2px">
               <div style="font-size:11px;color:var(--text2)">Total: <span style="font-weight:600;font-family:'DM Mono',monospace">${peso(rep.total||0)}</span></div>
-              <div style="font-size:11px;color:var(--gcash)">GCash: <span style="font-weight:700;font-family:'DM Mono',monospace">${peso(amt)}</span></div>
+              <div style="font-size:11px;color:var(--gcash)">GCash: <span style="font-weight:700;font-family:'DM Mono',monospace">${peso(amt)}</span> <span style="font-size:10px;opacity:.85">(-${peso(fee)} fee = ${peso(net)})</span></div>
               <div style="font-size:12px;font-weight:700;color:#dc2626;font-family:'DM Mono',monospace;background:#fee2e2;border-radius:6px;padding:1px 7px">Bal: ${peso(bal)}</div>
             </div>`;
           } else {
@@ -3497,25 +3510,26 @@ function updateGcashAmountPreview(){
   const amt=parseFloat(ga?.value||0)||0;
   const preview=document.getElementById('gcash-amount-preview');
   const fee = calcGcashFee(amt);
+  const net = Math.max(0, amt - fee);
   const feeNotes = document.querySelectorAll('.gcash-fee-note');
   feeNotes.forEach(el => {
     if(amt > 0){
       el.style.display = 'block';
-      el.innerHTML = '💸 <b>GCash Cash-out Fee:</b> ' + peso(fee) + ' <span style="opacity:0.8">(₱10 per ₱500)</span>';
+      el.innerHTML = '💸 <b>Less GCash Fee:</b> -' + peso(fee) + ' <span style="opacity:0.8">(₱10 per ₱500)</span> · <b>Net Credited:</b> ' + peso(net);
     } else {
       el.style.display = 'none';
     }
   });
   if(!preview) return;
   if(amt>0&&total>0){
-    const bal=Math.max(0,total-amt);
-    const pct=Math.min(100,Math.round(amt/total*100));
+    const bal=Math.max(0,total-net);
+    const pct=Math.min(100,Math.round(net/total*100));
     preview.style.display='block';
     const fill=document.getElementById('gcash-amount-fill');
     if(fill) fill.style.width=pct+'%';
     const pl=document.getElementById('gcash-amount-paid-lbl');
     const bl=document.getElementById('gcash-amount-bal-lbl');
-    if(pl) pl.textContent='GCash paid: '+peso(amt)+(fee>0?' (+'+peso(fee)+' fee)':'');
+    if(pl) pl.textContent='GCash: '+peso(amt)+' - '+peso(fee)+' fee = '+peso(net);
     if(bl) bl.textContent='Balance: '+peso(bal);
   } else {
     preview.style.display='none';
@@ -3973,12 +3987,16 @@ function printReceipt(id){
     }
   }
 
-  // Calculate GCash fee if applicable
-  const isGcash = bk.status === 'gcash';
-  const gcashPaid = bk.gcashamount || 0;
-  const gcashFee = isGcash ? calcGcashFee(gcashPaid > 0 ? gcashPaid : (bk.total || 0)) : (bk.gcashFee || 0);
+  // Calculate totals (consolidated if multi-room group)
+  const receiptTotal = groupBookings.length > 1 ? groupBookings.reduce((s,b)=>s+(b.total||0),0) : (bk.total||0);
+  const depositPaid  = groupBookings.length > 1 ? groupBookings.reduce((s,b)=>s+(b.deposit||0),0) : (bk.deposit||0);
+  const isGcash      = bk.status === 'gcash';
+  const gcashPaid    = groupBookings.length > 1 ? groupBookings.reduce((s,b)=>s+(b.gcashamount||0),0) : (bk.gcashamount||0);
+  const gcashFee     = isGcash ? calcGcashFee(gcashPaid > 0 ? gcashPaid : receiptTotal) : (bk.gcashFee || 0);
+  const gcashNet     = isGcash && gcashPaid > 0 ? Math.max(0, gcashPaid - gcashFee) : 0;
+  const gcashBal     = isGcash && gcashPaid > 0 ? Math.max(0, receiptTotal - gcashNet) : 0;
 
-  const bal=Math.max(0,(bk.total||0)-(bk.deposit||0));
+  const bal = Math.max(0, receiptTotal - depositPaid);
   const statusMap={paid:'✅ Fully Paid',adv:'💰 With Advance',otw:'🚗 On the way (Pay on arrival)',wlk:'🚶 Walk-in',gcash:'📱 GCash'};
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Receipt — ${bk.name}</title>
   <style>
@@ -4021,10 +4039,14 @@ function printReceipt(id){
   ${bk.fhHours?`<div class="row"><span class="lbl">Duration</span><span class="val">${bk.fhHours} hours</span></div>`:''}
   ${bk.gcashRef?`<div class="row"><span class="lbl">GCash Ref #</span><span class="val" style="font-family:monospace">${bk.gcashRef}</span></div>`:''}
   <div class="row"><span class="lbl">Payment Status</span><span class="val">${statusMap[bk.status]||'Walk-in'}</span></div>
-  ${isGcash && gcashPaid > 0 ? `<div class="row"><span class="lbl">GCash Amount</span><span class="val">${peso(gcashPaid)}</span></div>` : ''}
-  ${isGcash && gcashFee > 0 ? `<div class="row" style="color:#0070ba"><span class="lbl" style="color:#0070ba">GCash Fee (₱10/₱500)</span><span class="val">+${peso(gcashFee)}</span></div>` : ''}
-  <div class="total-row"><span class="lbl">Total</span><span class="val">${peso(bk.total||0)}</span></div>
-  ${bk.deposit?`<div class="balance"><span class="lbl">Deposit paid</span><span class="val">${peso(bk.deposit)}</span></div>
+  <div class="total-row"><span class="lbl">Total</span><span class="val">${peso(receiptTotal)}</span></div>
+  ${isGcash && gcashPaid > 0 ? `
+  <div class="row"><span class="lbl">GCash Sent</span><span class="val">${peso(gcashPaid)}</span></div>
+  <div class="row" style="color:#0070ba"><span class="lbl" style="color:#0070ba">Less GCash Fee (₱10/₱500)</span><span class="val">-${peso(gcashFee)}</span></div>
+  <div class="balance" style="background:#e0f0ff"><span class="lbl" style="color:#0070ba">Net GCash Paid</span><span class="val" style="color:#0070ba">${peso(gcashNet)}</span></div>
+  ${gcashBal > 0 ? `<div class="balance" style="background:#fee2e2"><span class="lbl" style="color:#dc2626">Balance due</span><span class="val" style="color:#dc2626">${peso(gcashBal)}</span></div>` : ''}
+  ` : (isGcash && gcashFee > 0 ? `<div class="row" style="color:#0070ba"><span class="lbl" style="color:#0070ba">Less GCash Fee (₱10/₱500)</span><span class="val">-${peso(gcashFee)}</span></div>` : '')}
+  ${depositPaid?`<div class="balance"><span class="lbl">Deposit paid</span><span class="val">${peso(depositPaid)}</span></div>
   <div class="balance" style="background:#fee2e2"><span class="lbl">Balance due</span><span class="val" style="color:#dc2626">${peso(bal)}</span></div>`:''}
   ${bk.note?`<div style="margin-top:12px;padding:8px 10px;background:#f4f1eb;border-radius:6px;font-size:12px;color:#6b6455"><b>Notes:</b> ${bk.note}</div>`:''}
   <div class="footer">
